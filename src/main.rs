@@ -6,6 +6,7 @@ mod orders;
 mod portfolio;
 mod security_types;
 mod futures_utils;
+mod margin;
 
 use market_data::MarketDataUpdate;
 
@@ -195,21 +196,41 @@ async fn main() -> Result<()> {
                 if !signals.is_empty() {
                     info!("Generated {} trading signals", signals.len());
                     
+                    // Get current account summary for margin validation
+                    let account_summary = match tws_client.get_account_summary().await {
+                        Ok(summary) => summary,
+                        Err(e) => {
+                            error!("Failed to get account summary for margin validation: {}", e);
+                            continue;
+                        }
+                    };
+                    
                     let mut order_mgr = order_manager.lock().await;
                     let mut port = portfolio.lock().await;
                     
                     for signal in signals {
-                        let order = order_mgr.create_order(signal.clone());
-                        
-                        match tws_client.place_order(&signal.symbol, signal.quantity, &signal.order_type).await {
-                            Ok(_) => {
-                                order_mgr.update_order_status(order.id, orders::OrderStatus::Submitted)?;
-                                port.update_position(signal.symbol.clone(), signal.quantity, signal.price);
-                                strategy.update_position(signal.symbol, signal.quantity);
+                        // Validate margin and create order
+                        match order_mgr.validate_and_create_order(
+                            signal.clone(),
+                            &port,
+                            &account_summary,
+                            config.risk_config.max_margin_utilization,
+                        ) {
+                            Ok(order) => {
+                                match tws_client.place_order(&signal.symbol, signal.quantity, &signal.order_type).await {
+                                    Ok(_) => {
+                                        order_mgr.update_order_status(order.id, orders::OrderStatus::Submitted)?;
+                                        port.update_position(signal.symbol.clone(), signal.quantity, signal.price);
+                                        strategy.update_position(signal.symbol, signal.quantity);
+                                    }
+                                    Err(e) => {
+                                        error!("Failed to place order: {}", e);
+                                        order_mgr.update_order_status(order.id, orders::OrderStatus::Rejected)?;
+                                    }
+                                }
                             }
                             Err(e) => {
-                                error!("Failed to place order: {}", e);
-                                order_mgr.update_order_status(order.id, orders::OrderStatus::Rejected)?;
+                                error!("Failed to create order due to margin constraints: {}", e);
                             }
                         }
                     }
@@ -244,6 +265,52 @@ async fn main() -> Result<()> {
                         log::debug!("Account update - Net Liq: ${:.2}, Unrealized P&L: ${:.2}", 
                             net_liq, unrealized_pnl);
                     }
+                    
+                    // Check margin health and update portfolio margin statistics
+                    let mut port = portfolio.lock().await;
+                    let margin_status = margin::check_margin_health(
+                        &port,
+                        &summary,
+                        config.risk_config.margin_call_threshold,
+                    );
+                    
+                    match margin_status {
+                        margin::MarginStatus::Healthy => {
+                            // No action needed
+                        }
+                        margin::MarginStatus::Warning(msg) => {
+                            log::warn!("Margin warning: {}", msg);
+                        }
+                        margin::MarginStatus::Critical(msg) => {
+                            log::error!("CRITICAL MARGIN ALERT: {}", msg);
+                            // TODO: Implement risk reduction or trading halt
+                        }
+                    }
+                    
+                    // Update portfolio margin statistics
+                    port.update_margin_stats(&summary);
+                    
+                    // Calculate and update margin for each position
+                    let positions = port.positions().clone();
+                    for (symbol, position) in positions.iter() {
+                        if let Some(ref security_info) = position.security_info {
+                            if let Ok(initial_margin) = margin::calculate_initial_margin(
+                                security_info,
+                                position.quantity,
+                                position.current_price,
+                            ) {
+                                if let Ok(maintenance_margin) = margin::calculate_maintenance_margin(
+                                    security_info,
+                                    position.quantity,
+                                    position.current_price,
+                                ) {
+                                    port.update_position_margin(symbol, initial_margin, maintenance_margin);
+                                }
+                            }
+                        }
+                    }
+                    port.recalculate_margin_totals();
+                }
                 }
             }
             _ = tokio::signal::ctrl_c() => {

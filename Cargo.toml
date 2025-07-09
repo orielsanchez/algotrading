@@ -2,6 +2,7 @@
 name = "algotrading"
 version = "0.1.0"
 edition = "2024"
+default-run = "algotrading"
 
 [dependencies]
 ibapi = "1.2.2"
@@ -14,3 +15,16 @@ anyhow = "1.0"
 log = "0.4"
 env_logger = "0.11"
 futures = "0.3"
+
+# Statistical Analysis
+statrs = "0.18"
+ndarray = "0.16"
+polars = { version = "0.49", features = ["lazy"] }
+
+# Data Storage
+arrow = "55.2"
+parquet = "55.2"
+
+# Testing
+proptest = "1.7"
+mockall = "0.13"

@@ -6,3 +6,5 @@ pub mod orders;
 pub mod portfolio;
 pub mod security_types;
 pub mod futures_utils;
+pub mod stats;
+pub mod margin;

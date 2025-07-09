@@ -11,6 +11,10 @@ pub struct Position {
     pub unrealized_pnl: f64,
     pub realized_pnl: f64,
     pub security_info: Option<SecurityInfo>,
+    // Margin fields
+    pub initial_margin: f64,
+    pub maintenance_margin: f64,
+    pub margin_utilization: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +33,11 @@ pub struct Portfolio {
     initial_cash: f64,
     total_realized_pnl: f64,
     security_map: HashMap<String, SecurityInfo>,
+    // Margin tracking
+    pub total_initial_margin: f64,
+    pub total_maintenance_margin: f64,
+    pub excess_liquidity: f64,
+    pub margin_cushion: f64,
 }
 
 impl Portfolio {
@@ -39,6 +48,10 @@ impl Portfolio {
             initial_cash,
             total_realized_pnl: 0.0,
             security_map: HashMap::new(),
+            total_initial_margin: 0.0,
+            total_maintenance_margin: 0.0,
+            excess_liquidity: initial_cash,
+            margin_cushion: 1.0,
         }
     }
     
@@ -72,6 +85,9 @@ impl Portfolio {
                 unrealized_pnl: 0.0,
                 realized_pnl: 0.0,
                 security_info: self.security_map.get(&symbol).cloned(),
+                initial_margin: 0.0,
+                maintenance_margin: 0.0,
+                margin_utilization: 0.0,
             });
         }
         
@@ -139,6 +155,48 @@ impl Portfolio {
     }
     
     pub fn get_all_positions(&self) -> &HashMap<String, Position> {
+        &self.positions
+    }
+    
+    /// Update position with margin information
+    pub fn update_position_margin(&mut self, symbol: &str, initial_margin: f64, maintenance_margin: f64) {
+        if let Some(position) = self.positions.get_mut(symbol) {
+            position.initial_margin = initial_margin;
+            position.maintenance_margin = maintenance_margin;
+            
+            // Calculate margin utilization for this position
+            if self.excess_liquidity > 0.0 {
+                position.margin_utilization = initial_margin / self.excess_liquidity;
+            }
+        }
+    }
+    
+    /// Recalculate total portfolio margin requirements
+    pub fn recalculate_margin_totals(&mut self) {
+        self.total_initial_margin = self.positions.values()
+            .map(|p| p.initial_margin)
+            .sum();
+        
+        self.total_maintenance_margin = self.positions.values()
+            .map(|p| p.maintenance_margin)
+            .sum();
+    }
+    
+    /// Update portfolio margin statistics from account data
+    pub fn update_margin_stats(&mut self, account_summary: &HashMap<String, f64>) {
+        if let Some(&excess_liq) = account_summary.get("ExcessLiquidity") {
+            self.excess_liquidity = excess_liq;
+        }
+        
+        if let Some(&net_liq) = account_summary.get("NetLiquidation") {
+            if net_liq > 0.0 && self.total_maintenance_margin > 0.0 {
+                self.margin_cushion = (net_liq - self.total_maintenance_margin) / net_liq;
+            }
+        }
+    }
+    
+    /// Get positions as reference for margin calculations
+    pub fn positions(&self) -> &HashMap<String, Position> {
         &self.positions
     }
 }

@@ -54,7 +54,23 @@ pub struct RiskConfig {
     pub max_portfolio_exposure: f64,
     pub stop_loss_percentage: f64,
     pub take_profit_percentage: f64,
+    #[serde(default = "default_max_margin_utilization")]
+    pub max_margin_utilization: f64,
+    #[serde(default = "default_min_excess_liquidity")]
+    pub min_excess_liquidity: f64,
+    #[serde(default = "default_futures_position_limit")]
+    pub futures_position_limit: f64,
+    #[serde(default = "default_margin_call_threshold")]
+    pub margin_call_threshold: f64,
+    #[serde(default = "default_margin_buffer_percentage")]
+    pub margin_buffer_percentage: f64,
 }
+
+fn default_max_margin_utilization() -> f64 { 0.70 }
+fn default_min_excess_liquidity() -> f64 { 10000.0 }
+fn default_futures_position_limit() -> f64 { 10.0 }
+fn default_margin_call_threshold() -> f64 { 0.85 }
+fn default_margin_buffer_percentage() -> f64 { 0.20 }
 
 impl TradingConfig {
     pub fn load() -> Result<Self> {
@@ -153,6 +169,11 @@ impl Default for TradingConfig {
                 max_portfolio_exposure: 0.95,
                 stop_loss_percentage: 0.02,
                 take_profit_percentage: 0.05,
+                max_margin_utilization: 0.70,
+                min_excess_liquidity: 10000.0,
+                futures_position_limit: 10.0,
+                margin_call_threshold: 0.85,
+                margin_buffer_percentage: 0.20,
             },
         }
     }

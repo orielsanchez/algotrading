@@ -1,7 +1,10 @@
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
-use log::info;
+use log::{info, warn};
 use crate::security_types::{SecurityInfo, SecurityType};
+use crate::portfolio::Portfolio;
+use crate::margin;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct OrderSignal {
@@ -49,6 +52,40 @@ impl OrderManager {
             orders: Vec::new(),
             next_order_id: 1000,
         }
+    }
+    
+    /// Create order with margin validation for futures
+    pub fn validate_and_create_order(
+        &mut self, 
+        signal: OrderSignal, 
+        portfolio: &Portfolio,
+        account_summary: &HashMap<String, f64>,
+        max_margin_utilization: f64,
+    ) -> Result<Order> {
+        // Check margin requirements for futures
+        if signal.security_info.security_type == SecurityType::Future {
+            let margin_validation = margin::validate_margin_requirements(
+                portfolio,
+                &signal,
+                account_summary,
+                max_margin_utilization,
+            )?;
+            
+            if !margin_validation.has_sufficient_margin {
+                return Err(anyhow!(
+                    "Insufficient margin for {}: required ${:.2}, available ${:.2}", 
+                    signal.symbol,
+                    margin_validation.required_margin, 
+                    margin_validation.available_margin
+                ));
+            }
+            
+            if let Some(warning) = margin_validation.warning_message {
+                warn!("Margin warning for {}: {}", signal.symbol, warning);
+            }
+        }
+        
+        Ok(self.create_order(signal))
     }
     
     pub fn create_order(&mut self, signal: OrderSignal) -> Order {

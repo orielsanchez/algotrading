@@ -84,6 +84,11 @@
     "max_position_size": 50000.0,
     "max_portfolio_exposure": 0.95,
     "stop_loss_percentage": 0.02,
-    "take_profit_percentage": 0.05
+    "take_profit_percentage": 0.05,
+    "max_margin_utilization": 0.70,
+    "min_excess_liquidity": 10000.0,
+    "futures_position_limit": 10.0,
+    "margin_call_threshold": 0.85,
+    "margin_buffer_percentage": 0.20
   }
 }
