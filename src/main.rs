@@ -277,15 +277,15 @@ async fn main() -> Result<()> {
                         debug!("{}:", security.symbol);
                         debug!("  Composite Score: {:.4}", multi_timeframe.composite_score);
 
-                        if let Some(ref st) = multi_timeframe.timeframe_metrics.get(&TimeFrame::Days1) {
+                        if let Some(st) = multi_timeframe.timeframe_metrics.get(&TimeFrame::Days1) {
                             debug!("  Short-term (1d): momentum={:.4}, risk_adj={:.4}, vol={:.2}%, sharpe={:.2}",
                                 st.simple_momentum, st.risk_adjusted_momentum, st.volatility * 100.0, st.sharpe_ratio);
                         }
-                        if let Some(ref mt) = multi_timeframe.timeframe_metrics.get(&TimeFrame::Days7) {
+                        if let Some(mt) = multi_timeframe.timeframe_metrics.get(&TimeFrame::Days7) {
                             debug!("  Medium-term (7d): momentum={:.4}, risk_adj={:.4}, vol={:.2}%, sharpe={:.2}",
                                 mt.simple_momentum, mt.risk_adjusted_momentum, mt.volatility * 100.0, mt.sharpe_ratio);
                         }
-                        if let Some(ref lt) = multi_timeframe.timeframe_metrics.get(&TimeFrame::Days14) {
+                        if let Some(lt) = multi_timeframe.timeframe_metrics.get(&TimeFrame::Days14) {
                             debug!("  Long-term (14d): momentum={:.4}, risk_adj={:.4}, vol={:.2}%, sharpe={:.2}",
                                 lt.simple_momentum, lt.risk_adjusted_momentum, lt.volatility * 100.0, lt.sharpe_ratio);
                         }
