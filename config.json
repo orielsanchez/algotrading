@@ -1,0 +1,89 @@
+{
+  "tws_config": {
+    "host": "127.0.0.1",
+    "port": 7497,
+    "client_id": 42
+  },
+  "strategy_config": {
+    "securities": [
+      {
+        "symbol": "AAPL",
+        "type": "Stock",
+        "exchange": "SMART",
+        "currency": "USD"
+      },
+      {
+        "symbol": "MSFT",
+        "type": "Stock",
+        "exchange": "SMART",
+        "currency": "USD"
+      },
+      {
+        "symbol": "GOOGL",
+        "type": "Stock",
+        "exchange": "SMART",
+        "currency": "USD"
+      },
+      {
+        "symbol": "AMZN",
+        "type": "Stock",
+        "exchange": "SMART",
+        "currency": "USD"
+      },
+      {
+        "symbol": "META",
+        "type": "Stock",
+        "exchange": "SMART",
+        "currency": "USD"
+      },
+      {
+        "symbol": "NVDA",
+        "type": "Stock",
+        "exchange": "SMART",
+        "currency": "USD"
+      },
+      {
+        "symbol": "TSLA",
+        "type": "Stock",
+        "exchange": "SMART",
+        "currency": "USD"
+      },
+      {
+        "symbol": "ES",
+        "type": "Future",
+        "exchange": "CME",
+        "currency": "USD",
+        "futures_specs": {
+          "underlying": "ES",
+          "expiry": "20240315",
+          "multiplier": 50.0,
+          "tick_size": 0.25,
+          "contract_month": "202403"
+        }
+      },
+      {
+        "symbol": "NQ",
+        "type": "Future",
+        "exchange": "CME",
+        "currency": "USD",
+        "futures_specs": {
+          "underlying": "NQ",
+          "expiry": "20240315",
+          "multiplier": 20.0,
+          "tick_size": 0.25,
+          "contract_month": "202403"
+        }
+      }
+    ],
+    "lookback_period": 20,
+    "momentum_threshold": 0.02,
+    "position_size": 10000.0,
+    "rebalance_frequency_minutes": 60
+  },
+  "risk_config": {
+    "max_position_size": 50000.0,
+    "max_portfolio_exposure": 0.95,
+    "stop_loss_percentage": 0.02,
+    "take_profit_percentage": 0.05
+  }
+}
