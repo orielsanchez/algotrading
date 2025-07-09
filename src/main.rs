@@ -10,6 +10,7 @@ mod order_types;
 mod orders;
 mod portfolio;
 mod risk;
+mod risk_budgeting;
 mod security_types;
 mod stats;
 mod volatility;
@@ -55,6 +56,12 @@ async fn main() -> Result<()> {
     let portfolio = Arc::new(Mutex::new(portfolio::Portfolio::new(100000.0)));
     let risk_manager = Arc::new(Mutex::new(risk::RiskManager::new(
         config.risk_config.clone(),
+    )));
+    
+    // Initialize risk budgeting system
+    let risk_budgeter = Arc::new(Mutex::new(risk_budgeting::RiskBudgeter::new(
+        config.risk_config.clone(),
+        config.risk_config.risk_budget_target_volatility,
     )));
 
     // Initialize market data handler with TwsClient
@@ -300,7 +307,7 @@ async fn main() -> Result<()> {
                     info!("Strategy has no tracked positions");
                 }
 
-                let signals = strategy.calculate_signals(&handler_guard);
+                let mut signals = strategy.calculate_signals(&handler_guard);
 
                 drop(handler_guard);
 
@@ -309,6 +316,48 @@ async fn main() -> Result<()> {
                     for signal in &signals {
                         debug!("Signal: {} {} {:.0} shares @ ${:.2} - {}",
                             signal.action, signal.symbol, signal.quantity, signal.price, signal.reason);
+                    }
+                    
+                    // Apply risk budgeting to signals if enabled
+                    if config.risk_config.enable_risk_budgeting {
+                        let mut port = portfolio.lock().await;
+                        let mut budgeter = risk_budgeter.lock().await;
+                        
+                        // Calculate risk budget allocations
+                        match budgeter.calculate_risk_contributions(&port) {
+                            Ok(risk_contributions) => {
+                                info!("Risk budgeting: {} positions analyzed", risk_contributions.risk_contributions.len());
+                                
+                                // Get ERC recommendations
+                                match budgeter.calculate_erc_allocations(&port) {
+                                    Ok(erc_allocations) => {
+                                        info!("ERC allocation: {} target weights", erc_allocations.len());
+                                        
+                                        // Adjust signal quantities based on risk budgeting
+                                        for signal in &mut signals {
+                                            if let Some(erc_allocation) = erc_allocations.iter().find(|a| a.symbol == signal.symbol) {
+                                                let portfolio_value = port.get_stats().total_value;
+                                                let target_value = erc_allocation.target_weight * portfolio_value;
+                                                let adjusted_quantity = target_value / signal.price;
+                                                
+                                                if adjusted_quantity.abs() < signal.quantity.abs() {
+                                                    info!("Risk budgeting: Reducing {} position size from {:.0} to {:.0}",
+                                                        signal.symbol, signal.quantity, adjusted_quantity);
+                                                    signal.quantity = adjusted_quantity;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        warn!("Failed to calculate ERC allocation: {}", e);
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                warn!("Failed to calculate risk contributions: {}", e);
+                            }
+                        }
+                        drop(port);
                     }
 
                     // Get current account summary for margin validation
@@ -406,6 +455,30 @@ async fn main() -> Result<()> {
                         if let Err(e) = risk_validation {
                             error!("Risk validation failed for {}: {}", signal.symbol, e);
                             continue;
+                        }
+
+                        // Additional risk budgeting validation if enabled
+                        if config.risk_config.enable_risk_budgeting {
+                            let budgeter = risk_budgeter.lock().await;
+                            
+                            // Check correlation risk
+                            let symbols: Vec<String> = port.positions().keys().cloned().collect();
+                            match budgeter.calculate_correlation_risk(&symbols) {
+                                Ok(correlation_risk) => {
+                                    if correlation_risk.diversification_score < (1.0 - config.risk_config.max_correlation_exposure) {
+                                        warn!("Risk budgeting: Diversification score too low for {}: {:.2}% < {:.2}%",
+                                            signal.symbol, 
+                                            correlation_risk.diversification_score * 100.0,
+                                            (1.0 - config.risk_config.max_correlation_exposure) * 100.0);
+                                        drop(budgeter);
+                                        continue;
+                                    }
+                                }
+                                Err(e) => {
+                                    warn!("Failed to calculate correlation risk for {}: {}", signal.symbol, e);
+                                }
+                            }
+                            drop(budgeter);
                         }
 
                         if !risk_validation.unwrap_or(false) {

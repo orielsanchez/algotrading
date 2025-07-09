@@ -10,6 +10,7 @@ pub mod order_types;
 pub mod orders;
 pub mod portfolio;
 pub mod risk;
+pub mod risk_budgeting;
 pub mod security_types;
 pub mod stats;
 pub mod volatility;

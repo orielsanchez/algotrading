@@ -72,6 +72,19 @@ pub struct RiskConfig {
     pub margin_call_threshold: f64,
     #[serde(default = "default_margin_buffer_percentage")]
     pub margin_buffer_percentage: f64,
+    // Risk Budgeting Configuration
+    #[serde(default = "default_enable_risk_budgeting")]
+    pub enable_risk_budgeting: bool,
+    #[serde(default = "default_risk_budget_target_volatility")]
+    pub risk_budget_target_volatility: f64,
+    #[serde(default = "default_risk_budget_rebalance_threshold")]
+    pub risk_budget_rebalance_threshold: f64,
+    #[serde(default = "default_max_correlation_exposure")]
+    pub max_correlation_exposure: f64,
+    #[serde(default = "default_correlation_lookback_days")]
+    pub correlation_lookback_days: usize,
+    #[serde(default = "default_min_positions_for_erc")]
+    pub min_positions_for_erc: usize,
 }
 
 impl Default for RiskConfig {
@@ -86,6 +99,12 @@ impl Default for RiskConfig {
             futures_position_limit: default_futures_position_limit(),
             margin_call_threshold: default_margin_call_threshold(),
             margin_buffer_percentage: default_margin_buffer_percentage(),
+            enable_risk_budgeting: default_enable_risk_budgeting(),
+            risk_budget_target_volatility: default_risk_budget_target_volatility(),
+            risk_budget_rebalance_threshold: default_risk_budget_rebalance_threshold(),
+            max_correlation_exposure: default_max_correlation_exposure(),
+            correlation_lookback_days: default_correlation_lookback_days(),
+            min_positions_for_erc: default_min_positions_for_erc(),
         }
     }
 }
@@ -120,6 +139,31 @@ fn default_use_limit_orders() -> bool {
 
 fn default_limit_order_offset() -> f64 {
     0.01 // 1% offset from current price for limit orders
+}
+
+// Risk Budgeting Configuration Defaults
+fn default_enable_risk_budgeting() -> bool {
+    true // Enable risk budgeting by default
+}
+
+fn default_risk_budget_target_volatility() -> f64 {
+    0.15 // 15% target portfolio volatility for risk budgeting
+}
+
+fn default_risk_budget_rebalance_threshold() -> f64 {
+    0.05 // 5% deviation from target risk allocation triggers rebalancing
+}
+
+fn default_max_correlation_exposure() -> f64 {
+    0.60 // Maximum 60% exposure to highly correlated assets
+}
+
+fn default_correlation_lookback_days() -> usize {
+    63 // ~3 months of trading days for correlation calculation
+}
+
+fn default_min_positions_for_erc() -> usize {
+    3 // Minimum 3 positions required for Equal Risk Contribution
 }
 
 impl TradingConfig {
@@ -231,6 +275,12 @@ impl Default for TradingConfig {
                 futures_position_limit: 10.0,
                 margin_call_threshold: 0.85,
                 margin_buffer_percentage: 0.20,
+                enable_risk_budgeting: default_enable_risk_budgeting(),
+                risk_budget_target_volatility: default_risk_budget_target_volatility(),
+                risk_budget_rebalance_threshold: default_risk_budget_rebalance_threshold(),
+                max_correlation_exposure: default_max_correlation_exposure(),
+                correlation_lookback_days: default_correlation_lookback_days(),
+                min_positions_for_erc: default_min_positions_for_erc(),
             },
         }
     }

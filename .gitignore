@@ -1,2 +1,27 @@
 /target
 claude-backup-*/
+
+# Sensitive files
+*.env
+*.key
+*.pem
+*.crt
+*.p12
+*.jks
+.env.*
+config-live.json
+config-prod.json
+*-prod.json
+*-live.json
+credentials.json
+secrets.json
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

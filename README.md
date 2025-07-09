@@ -1,14 +1,17 @@
-# Momentum Trading Bot for Interactive Brokers
+# Systematic Momentum Trading Bot
 
-A Rust-based momentum trading bot that interfaces with Interactive Brokers TWS API.
+A production-ready Rust-based algorithmic trading system implementing Robert Carver's systematic trading framework with volatility targeting, multi-timeframe signals, and comprehensive risk management.
+
+<a href="https://www.buymeacoffee.com/orielsanchez" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ## Overview
 
-This bot implements a momentum-based trading strategy that:
-- Tracks price momentum across multiple stocks
-- Ranks stocks by momentum scores
-- Automatically rebalances positions based on momentum signals
-- Manages risk through position sizing and portfolio exposure limits
+This systematic trading bot implements advanced momentum strategies with:
+- **Volatility Targeting**: 25% annual portfolio volatility with EWMA calculation (32-day half-life)
+- **Multi-Timeframe Momentum**: 4 timeframe signals (2-8, 4-16, 8-32, 16-64 days) with forecast diversification
+- **Breakout Detection**: Volatility-adjusted breakout signals with multi-timeframe consensus
+- **Smart Order Execution**: Limit orders with 1% price improvement over market prices
+- **Risk Management**: Position inertia buffers, exposure limits, and dynamic position sizing
 
 ## Prerequisites
 
@@ -28,15 +31,20 @@ Edit `config.json` to customize:
 
 - **TWS Connection**: Host, port, and client ID
 - **Strategy Parameters**: 
-  - Symbols to trade
-  - Lookback period for momentum calculation
-  - Momentum threshold
-  - Position sizing
+  - Symbols to trade (stocks and forex pairs)
+  - Momentum timeframes and lookback periods
+  - Volatility targeting parameters
+  - Signal combination weights
   - Rebalance frequency
+- **Order Execution**:
+  - Order types (market vs limit orders)
+  - Limit order price offsets
+  - Position inertia thresholds
 - **Risk Management**:
-  - Maximum position size
-  - Maximum portfolio exposure
-  - Stop loss and take profit percentages
+  - Portfolio volatility target (25% annual)
+  - Position size limits
+  - Portfolio exposure limits
+  - Forecast diversification multipliers
 
 ## Running the Bot
 
@@ -51,41 +59,58 @@ cargo run
 The bot will:
 1. Connect to TWS/IB Gateway
 2. Subscribe to market data for configured symbols
-3. Calculate momentum scores at specified intervals
-4. Generate and execute trading signals
-5. Log all activities and portfolio statistics
+3. Calculate multi-timeframe momentum and breakout signals
+4. Apply volatility targeting for position sizing
+5. Generate and execute trading signals with optimal order types
+6. Monitor portfolio risk and rebalance positions
+7. Log all activities and comprehensive portfolio analytics
 
 ## Architecture
 
-- `main.rs` - Main entry point and trading loop
-- `config.rs` - Configuration management
-- `connection.rs` - TWS API connection handling
-- `market_data.rs` - Real-time market data processing
-- `momentum.rs` - Momentum strategy implementation
-- `orders.rs` - Order management system
-- `portfolio.rs` - Portfolio tracking and analytics
+- `main.rs` - Application entry point and trading loop
+- `config.rs` - Configuration with volatility targeting
+- `connection.rs` - IBKR API with enhanced order types
+- `market_data.rs` - Multi-timeframe data processing
+- `momentum.rs` - Multi-timeframe momentum signals
+- `breakout.rs` - Breakout detection system
+- `volatility.rs` - Carver's volatility targeting
+- `order_types.rs` - Enhanced order management
+- `portfolio.rs` - Position tracking and analytics
+- `risk.rs` - Risk management and position sizing
 
 ## Safety Features
 
 - Paper trading configuration by default (port 7497)
-- Position size limits
-- Portfolio exposure limits
-- Comprehensive logging
+- Volatility-adjusted position sizing with dynamic risk control
+- Portfolio exposure limits and position inertia buffers
+- Signal strength validation and quality multipliers
+- Comprehensive logging and risk monitoring
 - Graceful shutdown on Ctrl+C
 
 ## Monitoring
 
 The bot logs:
-- Connection status
-- Market data updates
-- Momentum calculations
-- Trading signals generated
-- Order executions
-- Portfolio statistics
+- Connection status and API health
+- Market data updates and validation
+- Multi-timeframe momentum and breakout calculations
+- Signal generation with strength scores
+- Volatility targeting and position sizing decisions
+- Order executions with limit order performance
+- Portfolio statistics and risk metrics
+
+## Features
+
+- **Carver Framework**: Implements systematic trading principles with volatility targeting
+- **Multi-Asset Support**: Trades stocks and forex pairs with appropriate risk scaling
+- **Advanced Signal Generation**: Combines momentum and breakout signals across multiple timeframes
+- **Smart Execution**: Limit orders with price improvement for better fill prices
+- **Risk Management**: Comprehensive position sizing and portfolio risk controls
+- **Production Ready**: Robust error handling, logging, and connection management
 
 ## Notes
 
-- This bot uses the `ibapi` Rust crate for TWS communication
-- Ensure your TWS API settings allow connections from localhost
-- Test thoroughly in paper trading before using with real money
-- Monitor logs for any connection or execution issues
+- Uses `ibapi` Rust crate for Interactive Brokers TWS communication
+- Ensure TWS API settings allow connections from localhost
+- Test thoroughly in paper trading before deploying with real capital
+- Monitor logs for connection, execution, and risk management events
+- Follows Robert Carver's "Systematic Trading" methodology
