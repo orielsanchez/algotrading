@@ -104,7 +104,7 @@ impl MomentumStrategy {
                                         bollinger_signal_scaled * bollinger_weight;
                     
                     // Apply consensus boost if signals agree
-                    let signals = vec![momentum_composite, breakout_signal_scaled, bollinger_signal_scaled];
+                    let signals = [momentum_composite, breakout_signal_scaled, bollinger_signal_scaled];
                     let positive_signals = signals.iter().filter(|&&s| s > 0.0).count();
                     let negative_signals = signals.iter().filter(|&&s| s < 0.0).count();
                     let total_signals = signals.iter().filter(|&&s| s != 0.0).count();
@@ -217,7 +217,7 @@ impl MomentumStrategy {
                 // Basic momentum threshold
                 s.composite_score > self.config.momentum_threshold &&
                 // Additional quality filters
-                s.enhanced_metrics.as_ref().map_or(true, |em| {
+                s.enhanced_metrics.as_ref().is_none_or(|em| {
                     // Filter out high volatility stocks (risk management)
                     em.volatility < 0.5 && // Less than 50% annualized volatility
                     // Ensure momentum has some consistency (positive Sharpe-like ratio)
@@ -244,13 +244,18 @@ impl MomentumStrategy {
             if !top_performers.iter().any(|s| &s.symbol == position) {
                 if let Some(data) = market_data.get_market_data(position) {
                     if let Some(security_info) = market_data.get_security_info(position) {
+                        let action = "SELL";
+                        let order_type = self.get_order_type();
+                        let limit_price = self.calculate_limit_price(action, data.last_price);
+                        
                         signals.push(OrderSignal {
                             symbol: position.to_string(),
-                            action: "SELL".to_string(),
+                            action: action.to_string(),
                             quantity: self.current_positions[position].abs(),
                             price: data.last_price,
-                            order_type: "MKT".to_string(),
-                            reason: format!("Exit position - momentum rank dropped"),
+                            order_type,
+                            limit_price,
+                            reason: "Exit position - momentum rank dropped".to_string(),
                             security_info: security_info.clone(),
                         });
                     }
@@ -373,12 +378,16 @@ impl MomentumStrategy {
                             );
                         }
 
+                        let order_type = self.get_order_type();
+                        let limit_price = self.calculate_limit_price(action, data.last_price);
+                        
                         signals.push(OrderSignal {
                             symbol: score.symbol.clone(),
                             action: action.to_string(),
                             quantity: quantity.abs(),
                             price: data.last_price,
-                            order_type: "MKT".to_string(),
+                            order_type,
+                            limit_price,
                             reason,
                             security_info: security_info.clone(),
                         });
@@ -390,181 +399,41 @@ impl MomentumStrategy {
         signals
     }
 
-    fn calculate_position_size(
-        &self,
-        _symbol: &str,
-        momentum: f64,
-        security_info: &SecurityInfo,
-        price: f64,
-    ) -> f64 {
-        let base_size = self.config.position_size;
-        let momentum_multiplier = 1.0 + (momentum - self.config.momentum_threshold);
-        let adjusted_size = base_size * momentum_multiplier.min(2.0).max(0.5);
-
-        match security_info.security_type {
-            SecurityType::Stock => adjusted_size / price,
-            SecurityType::Future => {
-                if let Some(specs) = &security_info.contract_specs {
-                    let contract_value = price * specs.multiplier;
-                    (adjusted_size / contract_value).floor()
-                } else {
-                    1.0
-                }
-            }
-            SecurityType::Forex => {
-                // For forex, calculate position size in base currency units
-                // adjusted_size is the dollar amount we want to risk
-                // price is the exchange rate (quote currency per base currency)
-                // Result should be base currency units
-                
-                if let Some(ref _forex_pair) = security_info.forex_pair {
-                    // Calculate base currency units needed
-                    let base_currency_units = adjusted_size / price;
-                    
-                    // Round to appropriate lot size
-                    // Standard lot = 100,000, mini lot = 10,000, micro lot = 1,000
-                    let lot_size = if base_currency_units >= 100_000.0 {
-                        100_000.0  // Standard lot
-                    } else if base_currency_units >= 10_000.0 {
-                        10_000.0   // Mini lot
-                    } else {
-                        1_000.0    // Micro lot
-                    };
-                    
-                    (base_currency_units / lot_size).floor() * lot_size
-                } else {
-                    // Fallback for old format
-                    (adjusted_size / 1000.0).floor() * 1000.0
-                }
-            }
-        }
-    }
-
-    fn calculate_enhanced_position_size(
-        &self,
-        symbol: &str,
-        score: &MomentumScore,
-        security_info: &SecurityInfo,
-        price: f64,
-    ) -> f64 {
-        let base_size = self.config.position_size;
-
-        // TODO: This should be updated to use portfolio-based sizing
-        // For now, keeping the existing logic but this needs RiskManager integration
-
-        // Use enhanced metrics if available for better position sizing
-        let (momentum_multiplier, volatility_adjustment) =
-            if let Some(ref enhanced) = score.enhanced_metrics {
-                // Use risk-adjusted momentum for sizing
-                let momentum_mult =
-                    1.0 + (enhanced.risk_adjusted_momentum - self.config.momentum_threshold * 0.5);
-
-                // Adjust for volatility - reduce size for high volatility stocks
-                let vol_adj = if enhanced.volatility > 0.0 {
-                    // Scale down position size for high volatility (inverse relationship)
-                    // Volatility of 0.2 (20%) = 1.0x, 0.4 (40%) = 0.5x, 0.6 (60%) = 0.33x
-                    (0.2 / enhanced.volatility).min(2.0).max(0.25)
-                } else {
-                    1.0
-                };
-
-                (momentum_mult, vol_adj)
-            } else {
-                // Fallback to simple momentum
-                let momentum_mult = 1.0 + (score.momentum - self.config.momentum_threshold);
-                (momentum_mult, 1.0)
-            };
-
-        // Additional boost for multi-timeframe confirmation
-        let timeframe_boost = if let Some(ref mtf) = score.multi_timeframe {
-            // Calculate boost based on timeframe consensus
-            let positive_timeframes = mtf
-                .timeframe_metrics
-                .values()
-                .filter(|metrics| metrics.risk_adjusted_momentum > 0.0)
-                .count();
-
-            let total_timeframes = mtf.timeframe_metrics.len();
-
-            if total_timeframes > 0 {
-                let consensus_ratio = positive_timeframes as f64 / total_timeframes as f64;
-                // Boost ranges from 0.8x (all negative) to 1.2x (all positive)
-                0.8 + (consensus_ratio * 0.4)
-            } else {
-                1.0
-            }
-        } else {
-            1.0
-        };
-
-        let adjusted_size = base_size
-            * momentum_multiplier.min(2.0).max(0.5)
-            * volatility_adjustment
-            * timeframe_boost;
-
-        debug!(
-            "Enhanced position sizing for {}: base={:.0}, momentum_mult={:.2}, vol_adj={:.2}, timeframe_boost={:.2}, final_size={:.0}",
-            symbol,
-            base_size,
-            momentum_multiplier,
-            volatility_adjustment,
-            timeframe_boost,
-            adjusted_size
-        );
-
-        match security_info.security_type {
-            SecurityType::Stock => adjusted_size / price,
-            SecurityType::Future => {
-                if let Some(specs) = &security_info.contract_specs {
-                    let contract_value = price * specs.multiplier;
-                    (adjusted_size / contract_value).floor().max(1.0)
-                } else {
-                    1.0
-                }
-            }
-            SecurityType::Forex => {
-                if let Some(ref forex_pair) = security_info.forex_pair {
-                    // Debug logging for forex position sizing
-                    debug!("Forex position sizing for {}: adjusted_size={}, price={}, pair={:?}", 
-                           symbol, adjusted_size, price, forex_pair);
-                    
-                    // Calculate base currency units needed
-                    let base_currency_units = adjusted_size / price;
-                    
-                    // Sanity check for extreme position sizes
-                    if base_currency_units > 1_000_000.0 {
-                        warn!("Extremely large forex position calculated for {}: {} units at price {}. May indicate price data issue.", 
-                              symbol, base_currency_units, price);
-                        return 1_000.0; // Return minimum micro lot
-                    }
-                    
-                    // Round to appropriate lot size
-                    let lot_size = if base_currency_units >= 100_000.0 {
-                        100_000.0  // Standard lot
-                    } else if base_currency_units >= 10_000.0 {
-                        10_000.0   // Mini lot
-                    } else {
-                        1_000.0    // Micro lot
-                    };
-                    
-                    let final_size = (base_currency_units / lot_size).floor().max(1.0) * lot_size;
-                    debug!("Final forex position size for {}: {} units (lot_size={})", 
-                           symbol, final_size, lot_size);
-                    
-                    final_size
-                } else {
-                    // Fallback for old format
-                    ((adjusted_size / 1000.0).floor() * 1000.0).max(1000.0)
-                }
-            }
-        }
-    }
 
     pub fn update_position(&mut self, symbol: &str, quantity: f64) {
         if quantity == 0.0 {
             self.current_positions.remove(symbol);
         } else {
             self.current_positions.insert(symbol.to_string(), quantity);
+        }
+    }
+
+    /// Calculate limit price based on action and configuration
+    fn calculate_limit_price(&self, action: &str, market_price: f64) -> Option<f64> {
+        if !self.config.use_limit_orders {
+            return None;
+        }
+
+        let offset = self.config.limit_order_offset;
+        match action {
+            "BUY" => {
+                // For buy orders, place limit below market price
+                Some(market_price * (1.0 - offset))
+            }
+            "SELL" => {
+                // For sell orders, place limit above market price
+                Some(market_price * (1.0 + offset))
+            }
+            _ => None,
+        }
+    }
+
+    /// Get order type string based on configuration
+    fn get_order_type(&self) -> String {
+        if self.config.use_limit_orders {
+            "LMT".to_string()
+        } else {
+            "MKT".to_string()
         }
     }
 
@@ -605,7 +474,7 @@ impl MomentumStrategy {
             let vol_multiplier = if enhanced.volatility > 0.0 {
                 // Moderate volatility adjustment - don't completely kill high-vol signals
                 // but reduce them somewhat
-                (0.3 / enhanced.volatility).min(1.5).max(0.5)
+                (0.3 / enhanced.volatility).clamp(0.5, 1.5)
             } else {
                 1.0
             };
@@ -671,7 +540,7 @@ impl MomentumStrategy {
         
         // Step 7: Combine all factors and cap at -20 to +20
         let final_signal = scaled_signal * quality_multiplier * momentum_consensus_multiplier * breakout_consensus_multiplier * bollinger_volatility_multiplier;
-        let capped_signal = final_signal.min(20.0).max(-20.0);
+        let capped_signal = final_signal.clamp(-20.0, 20.0);
         
         debug!(
             "Signal strength calculation for {}: base={:.3}, centered={:.3}, scaled={:.2}, quality_mult={:.2}, momentum_consensus={:.2}, breakout_consensus={:.2}, bollinger_vol={:.2}, final={:.2}",
@@ -704,14 +573,14 @@ impl MomentumStrategy {
             SecurityType::Future => {
                 if let Some(specs) = &security_info.contract_specs {
                     let contract_value = price * specs.multiplier;
-                    let contracts = (raw_position_size * price / contract_value).floor().max(1.0);
-                    contracts
+                    
+                    (raw_position_size * price / contract_value).floor().max(1.0)
                 } else {
                     1.0
                 }
             }
             SecurityType::Forex => {
-                if let Some(ref forex_pair) = security_info.forex_pair {
+                if let Some(ref _forex_pair) = security_info.forex_pair {
                     // For forex, raw_position_size is already in dollar terms
                     let base_currency_units = raw_position_size / price;
                     

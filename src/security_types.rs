@@ -25,6 +25,7 @@ pub struct ForexPair {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct FuturesContract {
     pub underlying: String,
     pub expiry: String,
@@ -77,28 +78,13 @@ impl SecurityInfo {
         }
     }
 
-    pub fn new_future(
-        symbol: String,
-        exchange: String,
-        currency: String,
-        underlying: String,
-        expiry: String,
-        multiplier: f64,
-        tick_size: f64,
-        contract_month: String,
-    ) -> Self {
+    pub fn new_future(symbol: String, exchange: String, currency: String, contract: FuturesContract) -> Self {
         Self {
             symbol,
             security_type: SecurityType::Future,
             exchange,
             currency,
-            contract_specs: Some(FuturesContract {
-                underlying,
-                expiry,
-                multiplier,
-                tick_size,
-                contract_month,
-            }),
+            contract_specs: Some(contract),
             forex_pair: None,
         }
     }
@@ -138,16 +124,12 @@ impl SecurityInfo {
     }
 
     pub fn get_forex_description(&self) -> Option<String> {
-        if let Some(ref pair) = self.forex_pair {
-            Some(format!(
+        self.forex_pair.as_ref().map(|pair| format!(
                 "Trading {} {} against {} {}",
                 self.symbol,
                 pair.base_currency,
                 self.currency,
                 pair.quote_currency
             ))
-        } else {
-            None
-        }
     }
 }

@@ -1,6 +1,6 @@
 use crate::config::RiskConfig;
 use crate::portfolio::{Portfolio, Position};
-use crate::security_types::{SecurityInfo, SecurityType};
+use crate::security_types::SecurityType;
 use anyhow::Result;
 use log::{error, info, warn};
 use std::collections::HashMap;
@@ -57,7 +57,6 @@ pub enum RiskUrgency {
 
 pub struct RiskManager {
     pub config: RiskConfig,
-    position_limits: HashMap<String, f64>,
     stop_losses: HashMap<String, f64>,
     take_profits: HashMap<String, f64>,
 }
@@ -66,7 +65,6 @@ impl RiskManager {
     pub fn new(config: RiskConfig) -> Self {
         Self {
             config,
-            position_limits: HashMap::new(),
             stop_losses: HashMap::new(),
             take_profits: HashMap::new(),
         }
@@ -112,7 +110,7 @@ impl RiskManager {
     }
 
     /// Calculate stop loss price based on position and risk parameters
-    pub fn calculate_stop_loss(&self, position: &Position, entry_price: f64, is_long: bool) -> f64 {
+    pub fn calculate_stop_loss(&self, _position: &Position, entry_price: f64, is_long: bool) -> f64 {
         let stop_loss_percentage = self.config.stop_loss_percentage;
 
         if is_long {
@@ -127,7 +125,7 @@ impl RiskManager {
     /// Calculate take profit price based on position and risk parameters
     pub fn calculate_take_profit(
         &self,
-        position: &Position,
+        _position: &Position,
         entry_price: f64,
         is_long: bool,
     ) -> f64 {
@@ -151,7 +149,7 @@ impl RiskManager {
         let mut current_exposure = 0.0;
         let mut positions_at_risk = 0;
 
-        for (_, position) in portfolio.positions() {
+        for position in portfolio.positions().values() {
             let position_value = position.quantity * position.current_price;
             current_exposure += position_value.abs();
 
@@ -367,7 +365,7 @@ impl RiskManager {
     pub fn validate_new_position(
         &self,
         portfolio: &Portfolio,
-        symbol: &str,
+        _symbol: &str,
         quantity: f64,
         price: f64,
     ) -> Result<bool> {
@@ -432,7 +430,7 @@ impl RiskManager {
         info!("Positions at Risk: {}", risk_metrics.positions_at_risk);
 
         // Log individual position risks
-        for (symbol, _) in portfolio.positions() {
+        for symbol in portfolio.positions().keys() {
             if let Some(position_risk) = self.analyze_position_risk(portfolio, symbol) {
                 info!(
                     "Position Risk - {}: {:.2}% of portfolio, SL: ${:.4}, TP: ${:.4}",
@@ -464,7 +462,6 @@ impl RiskManager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_position_size_calculation() {

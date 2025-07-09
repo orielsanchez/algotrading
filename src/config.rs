@@ -30,6 +30,10 @@ pub struct StrategyConfig {
     pub target_volatility: f64,
     #[serde(default = "default_volatility_halflife")]
     pub volatility_halflife: f64,
+    #[serde(default = "default_use_limit_orders")]
+    pub use_limit_orders: bool,
+    #[serde(default = "default_limit_order_offset")]
+    pub limit_order_offset: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,6 +112,14 @@ fn default_target_volatility() -> f64 {
 
 fn default_volatility_halflife() -> f64 {
     32.0 // 32-day half-life for EWMA
+}
+
+fn default_use_limit_orders() -> bool {
+    true // Prefer limit orders for better execution prices
+}
+
+fn default_limit_order_offset() -> f64 {
+    0.01 // 1% offset from current price for limit orders
 }
 
 impl TradingConfig {
@@ -206,6 +218,8 @@ impl Default for TradingConfig {
                 rebalance_frequency_minutes: 60,
                 target_volatility: default_target_volatility(),
                 volatility_halflife: default_volatility_halflife(),
+                use_limit_orders: default_use_limit_orders(),
+                limit_order_offset: default_limit_order_offset(),
             },
             risk_config: RiskConfig {
                 max_position_size: 50000.0,

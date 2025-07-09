@@ -58,34 +58,37 @@ pub struct EnhancedOrderBuilder;
 impl EnhancedOrderBuilder {
     /// Create a market order
     pub fn market_order(action: OrderAction, quantity: f64) -> Order {
-        let mut order = Order::default();
-        order.action = action.into();
-        order.total_quantity = quantity;
-        order.order_type = "MKT".to_string();
-        order.tif = "DAY".to_string();
-        order
+        Order {
+            action: action.into(),
+            total_quantity: quantity,
+            order_type: "MKT".to_string(),
+            tif: "DAY".to_string(),
+            ..Default::default()
+        }
     }
 
     /// Create a limit order
     pub fn limit_order(action: OrderAction, quantity: f64, limit_price: f64) -> Order {
-        let mut order = Order::default();
-        order.action = action.into();
-        order.total_quantity = quantity;
-        order.order_type = "LMT".to_string();
-        order.limit_price = Some(limit_price);
-        order.tif = "DAY".to_string();
-        order
+        Order {
+            action: action.into(),
+            total_quantity: quantity,
+            order_type: "LMT".to_string(),
+            limit_price: Some(limit_price),
+            tif: "DAY".to_string(),
+            ..Default::default()
+        }
     }
 
     /// Create a stop order (stop market)
     pub fn stop_order(action: OrderAction, quantity: f64, stop_price: f64) -> Order {
-        let mut order = Order::default();
-        order.action = action.into();
-        order.total_quantity = quantity;
-        order.order_type = "STP".to_string();
-        order.aux_price = Some(stop_price);
-        order.tif = "DAY".to_string();
-        order
+        Order {
+            action: action.into(),
+            total_quantity: quantity,
+            order_type: "STP".to_string(),
+            aux_price: Some(stop_price),
+            tif: "DAY".to_string(),
+            ..Default::default()
+        }
     }
 
     /// Create a stop-limit order
@@ -95,14 +98,15 @@ impl EnhancedOrderBuilder {
         stop_price: f64,
         limit_price: f64,
     ) -> Order {
-        let mut order = Order::default();
-        order.action = action.into();
-        order.total_quantity = quantity;
-        order.order_type = "STP LMT".to_string();
-        order.limit_price = Some(limit_price);
-        order.aux_price = Some(stop_price);
-        order.tif = "DAY".to_string();
-        order
+        Order {
+            action: action.into(),
+            total_quantity: quantity,
+            order_type: "STP LMT".to_string(),
+            limit_price: Some(limit_price),
+            aux_price: Some(stop_price),
+            tif: "DAY".to_string(),
+            ..Default::default()
+        }
     }
 
     /// Create a trailing stop order
@@ -112,10 +116,12 @@ impl EnhancedOrderBuilder {
         trail_amount: f64,
         is_percentage: bool,
     ) -> Order {
-        let mut order = Order::default();
-        order.action = action.into();
-        order.total_quantity = quantity;
-        order.order_type = "TRAIL".to_string();
+        let mut order = Order {
+            action: action.into(),
+            total_quantity: quantity,
+            order_type: "TRAIL".to_string(),
+            ..Default::default()
+        };
         
         if is_percentage {
             order.trail_stop_price = Some(trail_amount);
@@ -138,13 +144,15 @@ impl EnhancedOrderBuilder {
         let mut orders = Vec::new();
 
         // Parent order (limit order to enter position)
-        let mut parent = Order::default();
-        parent.action = action.clone().into();
-        parent.total_quantity = quantity;
-        parent.order_type = "LMT".to_string();
-        parent.limit_price = Some(entry_price);
-        parent.tif = "DAY".to_string();
-        parent.transmit = false; // Don't transmit until children are attached
+        let parent = Order {
+            action: action.clone().into(),
+            total_quantity: quantity,
+            order_type: "LMT".to_string(),
+            limit_price: Some(entry_price),
+            tif: "DAY".to_string(),
+            transmit: false,
+            ..Default::default()
+        }; // Don't transmit until children are attached
         orders.push(parent);
 
         // Profit target order (opposite action)
@@ -152,13 +160,15 @@ impl EnhancedOrderBuilder {
             OrderAction::Buy => OrderAction::Sell,
             OrderAction::Sell => OrderAction::Buy,
         };
-        let mut profit_order = Order::default();
-        profit_order.action = profit_action.into();
-        profit_order.total_quantity = quantity;
-        profit_order.order_type = "LMT".to_string();
-        profit_order.limit_price = Some(profit_target);
-        profit_order.tif = "GTC".to_string();
-        profit_order.parent_id = 0; // Will be set to parent order ID
+        let profit_order = Order {
+            action: profit_action.into(),
+            total_quantity: quantity,
+            order_type: "LMT".to_string(),
+            limit_price: Some(profit_target),
+            tif: "GTC".to_string(),
+            parent_id: 0,
+            ..Default::default()
+        }; // Will be set to parent order ID
         orders.push(profit_order);
 
         // Stop loss order (opposite action)
@@ -166,13 +176,15 @@ impl EnhancedOrderBuilder {
             OrderAction::Buy => OrderAction::Sell,
             OrderAction::Sell => OrderAction::Buy,
         };
-        let mut stop_order = Order::default();
-        stop_order.action = stop_action.into();
-        stop_order.total_quantity = quantity;
-        stop_order.order_type = "STP".to_string();
-        stop_order.aux_price = Some(stop_loss);
-        stop_order.tif = "GTC".to_string();
-        stop_order.parent_id = 0; // Will be set to parent order ID
+        let stop_order = Order {
+            action: stop_action.into(),
+            total_quantity: quantity,
+            order_type: "STP".to_string(),
+            aux_price: Some(stop_loss),
+            tif: "GTC".to_string(),
+            parent_id: 0,
+            ..Default::default()
+        }; // Will be set to parent order ID
         orders.push(stop_order);
 
         orders

@@ -64,36 +64,22 @@ async fn main() -> Result<()> {
     let mut port = portfolio.lock().await;
     for security_cfg in &config.strategy_config.securities {
         let security_info = match security_cfg.security_type {
-            security_types::SecurityType::Future => security_types::SecurityInfo::new_future(
-                security_cfg.symbol.clone(),
-                security_cfg.exchange.clone(),
-                security_cfg.currency.clone(),
-                security_cfg
-                    .futures_specs
-                    .as_ref()
-                    .map(|s| s.underlying.clone())
-                    .unwrap_or_default(),
-                security_cfg
-                    .futures_specs
-                    .as_ref()
-                    .map(|s| s.expiry.clone())
-                    .unwrap_or_default(),
-                security_cfg
-                    .futures_specs
-                    .as_ref()
-                    .map(|s| s.multiplier)
-                    .unwrap_or(1.0),
-                security_cfg
-                    .futures_specs
-                    .as_ref()
-                    .map(|s| s.tick_size)
-                    .unwrap_or(0.01),
-                security_cfg
-                    .futures_specs
-                    .as_ref()
-                    .map(|s| s.contract_month.clone())
-                    .unwrap_or_default(),
-            ),
+            security_types::SecurityType::Future => {
+                let contract = security_cfg.futures_specs.as_ref().map(|s| security_types::FuturesContract {
+                    underlying: s.underlying.clone(),
+                    expiry: s.expiry.clone(),
+                    multiplier: s.multiplier,
+                    tick_size: s.tick_size,
+                    contract_month: s.contract_month.clone(),
+                }).unwrap_or_default();
+                
+                security_types::SecurityInfo::new_future(
+                    security_cfg.symbol.clone(),
+                    security_cfg.exchange.clone(),
+                    security_cfg.currency.clone(),
+                    contract,
+                )
+            },
             security_types::SecurityType::Forex => security_types::SecurityInfo::new_forex(
                 security_cfg.symbol.clone(),
                 security_cfg.exchange.clone(),
@@ -147,36 +133,22 @@ async fn main() -> Result<()> {
         let mut handler_guard = tws_client.market_data_handler.lock().await;
 
         let security_info = match security_cfg.security_type {
-            security_types::SecurityType::Future => security_types::SecurityInfo::new_future(
-                security_cfg.symbol.clone(),
-                security_cfg.exchange.clone(),
-                security_cfg.currency.clone(),
-                security_cfg
-                    .futures_specs
-                    .as_ref()
-                    .map(|s| s.underlying.clone())
-                    .unwrap_or_default(),
-                security_cfg
-                    .futures_specs
-                    .as_ref()
-                    .map(|s| s.expiry.clone())
-                    .unwrap_or_default(),
-                security_cfg
-                    .futures_specs
-                    .as_ref()
-                    .map(|s| s.multiplier)
-                    .unwrap_or(1.0),
-                security_cfg
-                    .futures_specs
-                    .as_ref()
-                    .map(|s| s.tick_size)
-                    .unwrap_or(0.01),
-                security_cfg
-                    .futures_specs
-                    .as_ref()
-                    .map(|s| s.contract_month.clone())
-                    .unwrap_or_default(),
-            ),
+            security_types::SecurityType::Future => {
+                let contract = security_cfg.futures_specs.as_ref().map(|s| security_types::FuturesContract {
+                    underlying: s.underlying.clone(),
+                    expiry: s.expiry.clone(),
+                    multiplier: s.multiplier,
+                    tick_size: s.tick_size,
+                    contract_month: s.contract_month.clone(),
+                }).unwrap_or_default();
+                
+                security_types::SecurityInfo::new_future(
+                    security_cfg.symbol.clone(),
+                    security_cfg.exchange.clone(),
+                    security_cfg.currency.clone(),
+                    contract,
+                )
+            },
             security_types::SecurityType::Forex => security_types::SecurityInfo::new_forex(
                 security_cfg.symbol.clone(),
                 security_cfg.exchange.clone(),
@@ -395,7 +367,7 @@ async fn main() -> Result<()> {
                                 Ok(order) => {
                                     info!("Created risk reduction order #{}: {} {} {}",
                                         order.id, order.action, order.quantity, order.symbol);
-                                    match tws_client.place_order(&order.symbol, order.quantity, &order.order_type).await {
+                                    match tws_client.place_order_from_order(&order).await {
                                         Ok(tws_order_id) => {
                                             let _ = order_mgr.update_order_status(order.id, orders::OrderStatus::Submitted);
                                             info!("Risk reduction order submitted to TWS: {} {} {} (TWS ID: {})", order.action, order.quantity, order.symbol, tws_order_id);
@@ -450,7 +422,7 @@ async fn main() -> Result<()> {
                             config.risk_config.max_margin_utilization,
                         ) {
                             Ok(order) => {
-                                match tws_client.place_order(&signal.symbol, signal.quantity, &signal.order_type).await {
+                                match tws_client.place_order(&signal).await {
                                     Ok(tws_order_id) => {
                                         let _ = order_mgr.update_order_status(order.id, orders::OrderStatus::Submitted);
                                         // NOTE: Don't update portfolio here - wait for TWS position sync
@@ -662,6 +634,7 @@ async fn main() -> Result<()> {
                                     quantity: risk_signal.quantity,
                                     price: 0.0, // Market order - price will be filled by market
                                     order_type: "MKT".to_string(),
+                                    limit_price: None, // Market order - no limit price
                                     reason: format!("RISK REDUCTION: {}", risk_signal.reason),
                                     security_info: portfolio.lock().await
                                         .get_position(&risk_signal.symbol)
@@ -688,11 +661,7 @@ async fn main() -> Result<()> {
                                 info!("Created risk reduction order #{} for {}", order.id, order.symbol);
 
                                 // Execute the order through TWS
-                                match tws_client.place_order(
-                                    &order.symbol,
-                                    -order.quantity, // Negative for sell
-                                    &order.order_type
-                                ).await {
+                                match tws_client.place_order_from_order(&order).await {
                                     Ok(tws_order_id) => {
                                         info!("Successfully submitted risk reduction order for {} (TWS ID: {})", order.symbol, tws_order_id);
                                         let _ = order_mgr.update_order_status(order.id, orders::OrderStatus::Submitted);
@@ -717,16 +686,15 @@ async fn main() -> Result<()> {
     }
 
     // Cleanup
-    let mut tws_client_mut = Arc::try_unwrap(tws_client).unwrap_or_else(|arc| (*arc).clone());
-    tws_client_mut.disconnect().await?;
+    // Try to get exclusive access to disconnect, but don't panic if other refs exist
+    if let Ok(mut tws_client_mut) = Arc::try_unwrap(tws_client) {
+        tws_client_mut.disconnect().await?;
+    } else {
+        warn!("Could not get exclusive access to TwsClient for disconnect");
+    }
 
     info!("Bot disconnected");
     Ok(())
 }
 
-// Need to implement Clone for TwsClient to handle the Arc unwrap
-impl Clone for connection::TwsClient {
-    fn clone(&self) -> Self {
-        panic!("TwsClient cannot be cloned")
-    }
-}
+// TwsClient is not cloneable by design to prevent multiple concurrent access

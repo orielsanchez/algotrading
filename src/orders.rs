@@ -13,6 +13,7 @@ pub struct OrderSignal {
     pub quantity: f64,
     pub price: f64,
     pub order_type: String,
+    pub limit_price: Option<f64>,
     pub reason: String,
     pub security_info: SecurityInfo,
 }
@@ -44,6 +45,12 @@ pub enum OrderStatus {
 pub struct OrderManager {
     orders: Vec<Order>,
     next_order_id: i32,
+}
+
+impl Default for OrderManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl OrderManager {

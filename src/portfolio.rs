@@ -31,7 +31,6 @@ pub struct PortfolioStats {
 pub struct Portfolio {
     positions: HashMap<String, Position>,
     cash_balance: f64,
-    initial_cash: f64,
     total_realized_pnl: f64,
     security_map: HashMap<String, SecurityInfo>,
     // Margin tracking
@@ -46,7 +45,6 @@ impl Portfolio {
         Self {
             positions: HashMap::new(),
             cash_balance: initial_cash,
-            initial_cash,
             total_realized_pnl: 0.0,
             security_map: HashMap::new(),
             total_initial_margin: 0.0,

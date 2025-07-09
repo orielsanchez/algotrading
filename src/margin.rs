@@ -244,7 +244,7 @@ pub fn check_margin_health(
     let excess_liquidity = account_summary
         .get("excess_liquidity")
         .copied()
-        .unwrap_or_else(|| {
+        .unwrap_or({
             // Calculate if not provided
             net_liquidation - maintenance_margin
         });
@@ -394,14 +394,15 @@ mod tests {
             quantity: 1.0,
             price: 5500.0,
             order_type: "MKT".to_string(),
+            limit_price: None,
             reason: "Test order".to_string(),
             security_info: es_info,
         };
 
         let mut account_summary = HashMap::new();
-        account_summary.insert("AvailableFunds".to_string(), 50000.0);
-        account_summary.insert("InitMarginReq".to_string(), 20000.0);
-        account_summary.insert("NetLiquidation".to_string(), 100000.0);
+        account_summary.insert("available_funds".to_string(), 50000.0);
+        account_summary.insert("initial_margin".to_string(), 20000.0);
+        account_summary.insert("net_liquidation".to_string(), 100000.0);
 
         let portfolio = crate::portfolio::Portfolio::new(100000.0);
         let validation = validate_margin_requirements(

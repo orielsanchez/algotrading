@@ -39,6 +39,12 @@ pub struct BreakoutCalculator {
     pub lookback_periods: Vec<usize>,
 }
 
+impl Default for BreakoutCalculator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BreakoutCalculator {
     pub fn new() -> Self {
         Self {
@@ -217,7 +223,7 @@ impl BreakoutCalculator {
                 let base_strength = magnitude * 100.0; // Convert to percentage
                 let percentile_boost = (breakout.percentile_rank - 0.5) * 2.0; // -1 to +1
                 let final_strength = base_strength * 20.0 + percentile_boost * 10.0;
-                final_strength.min(20.0).max(0.0)
+                final_strength.clamp(0.0, 20.0)
             }
             BreakoutType::DownBreakout => {
                 // Calculate strength based on breakdown magnitude and percentile rank
@@ -225,7 +231,7 @@ impl BreakoutCalculator {
                 let base_strength = magnitude * 100.0; // Convert to percentage
                 let percentile_boost = (0.5 - breakout.percentile_rank) * 2.0; // -1 to +1
                 let final_strength = -(base_strength * 20.0 + percentile_boost * 10.0);
-                final_strength.max(-20.0).min(0.0)
+                final_strength.clamp(-20.0, 0.0)
             }
         }
     }
@@ -320,11 +326,11 @@ impl BreakoutCalculator {
             BreakoutType::NoBreakout => 0.0,
             BreakoutType::UpBreakout => {
                 let breakout_distance = current_price - breakout_level;
-                (breakout_distance / range).min(1.0).max(0.0)
+                (breakout_distance / range).clamp(0.0, 1.0)
             }
             BreakoutType::DownBreakout => {
                 let breakout_distance = breakout_level - current_price;
-                -(breakout_distance / range).min(1.0).max(0.0)
+                -(breakout_distance / range).clamp(0.0, 1.0)
             }
         }
     }
@@ -619,7 +625,7 @@ mod tests {
         };
         
         let strength = calc.breakout_to_signal_strength(&strong_down_signal);
-        assert!(strength < -10.0 && strength >= -20.0); // Should be strong negative
+        assert!((-20.0..-10.0).contains(&strength)); // Should be strong negative
         
         // Test no breakout
         let no_signal = BreakoutSignal {

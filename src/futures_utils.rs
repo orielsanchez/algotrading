@@ -57,7 +57,7 @@ impl ContractMonth {
     }
 
     /// Get the month number (1-12)
-    pub fn to_month(&self) -> u32 {
+    pub fn to_month(self) -> u32 {
         match self {
             ContractMonth::January => 1,
             ContractMonth::February => 2,

@@ -51,6 +51,12 @@ pub struct BollingerCalculator {
     pub squeeze_threshold: f64,  // Bandwidth threshold for squeeze detection
 }
 
+impl Default for BollingerCalculator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BollingerCalculator {
     pub fn new() -> Self {
         Self {
@@ -320,7 +326,7 @@ impl BollingerCalculator {
         let carver_strength = combined_strength * 20.0; // Scale to -20 to +20
         
         // Ensure within bounds
-        carver_strength.max(-20.0).min(20.0)
+        carver_strength.clamp(-20.0, 20.0)
     }
 }
 
@@ -560,7 +566,7 @@ mod tests {
         
         let strength = calc.bollinger_to_signal_strength(&mean_reversion_signal);
         assert!(strength < 0.0); // Should be negative (sell signal)
-        assert!(strength >= -20.0 && strength <= 20.0); // Within Carver range
+        assert!((-20.0..=20.0).contains(&strength)); // Within Carver range
         
         // Test breakout signal (price above upper band)
         let breakout_signal = BollingerSignal {
@@ -582,7 +588,7 @@ mod tests {
         
         let strength = calc.bollinger_to_signal_strength(&breakout_signal);
         assert!(strength > 0.0); // Should be positive (buy signal)
-        assert!(strength >= -20.0 && strength <= 20.0); // Within Carver range
+        assert!((-20.0..=20.0).contains(&strength)); // Within Carver range
     }
     
     #[test]

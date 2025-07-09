@@ -1,4 +1,5 @@
 use crate::config::RiskConfig;
+use anyhow::{anyhow, Result};
 use log::{debug, info};
 use std::collections::HashMap;
 
@@ -39,7 +40,7 @@ impl VolatilityCalculator {
     }
     
     /// Update price data and calculate new volatility estimate
-    pub fn update_price(&mut self, symbol: &str, price: f64) {
+    pub fn update_price(&mut self, symbol: &str, price: f64) -> Result<()> {
         // Initialize if first price for this symbol
         if !self.price_history.contains_key(symbol) {
             self.price_history.insert(symbol.to_string(), Vec::new());
@@ -48,8 +49,10 @@ impl VolatilityCalculator {
         }
         
         let return_rate = {
-            let prices = self.price_history.get_mut(symbol).unwrap();
-            let returns = self.return_history.get_mut(symbol).unwrap();
+            let prices = self.price_history.get_mut(symbol)
+                .ok_or_else(|| anyhow!("No price history for symbol: {}", symbol))?;
+            let returns = self.return_history.get_mut(symbol)
+                .ok_or_else(|| anyhow!("No return history for symbol: {}", symbol))?;
             
             // Add new price
             prices.push(price);
@@ -80,12 +83,16 @@ impl VolatilityCalculator {
         if let Some(rate) = return_rate {
             self.update_volatility_estimate(symbol, rate);
         }
+        
+        Ok(())
     }
     
     /// Update EWMA volatility estimate
     fn update_volatility_estimate(&mut self, symbol: &str, new_return: f64) {
-        let returns_len = self.return_history.get(symbol).unwrap().len();
-        let current_vol = *self.volatility_estimates.get(symbol).unwrap();
+        let returns_len = self.return_history.get(symbol)
+            .map(|returns| returns.len())
+            .unwrap_or(0);
+        let current_vol = *self.volatility_estimates.get(symbol).unwrap_or(&0.0);
         
         if returns_len == 1 {
             // First return - use squared return as initial variance
@@ -154,7 +161,9 @@ impl VolatilityTargeter {
     /// Update price data for all instruments
     pub fn update_prices(&mut self, prices: &HashMap<String, f64>) {
         for (symbol, price) in prices {
-            self.volatility_calc.update_price(symbol, *price);
+            if let Err(e) = self.volatility_calc.update_price(symbol, *price) {
+                debug!("Error updating volatility for {}: {}", symbol, e);
+            }
         }
     }
     
@@ -195,7 +204,7 @@ impl VolatilityTargeter {
         let base_idm = (num_instruments as f64).sqrt();
         
         // Cap IDM to reasonable range
-        base_idm.min(2.5).max(1.0)
+        base_idm.clamp(1.0, 2.5)
     }
     
     /// Calculate forecast diversification multiplier (FDM)
@@ -205,7 +214,7 @@ impl VolatilityTargeter {
         let base_fdm = (num_signals as f64).sqrt();
         
         // Cap FDM to reasonable range
-        base_fdm.min(2.0).max(1.0)
+        base_fdm.clamp(1.0, 2.0)
     }
     
     /// Get portfolio volatility estimate
@@ -247,10 +256,10 @@ mod tests {
     fn test_volatility_calculator() {
         let mut calc = VolatilityCalculator::new(32.0, 252.0);
         
-        // Test with simple price series
-        let prices = vec![100.0, 101.0, 99.0, 102.0, 98.0];
+        // Test with sufficient price series (need at least 10 for has_sufficient_data)
+        let prices = vec![100.0, 101.0, 99.0, 102.0, 98.0, 103.0, 97.0, 104.0, 96.0, 105.0, 95.0];
         for price in prices {
-            calc.update_price("TEST", price);
+            calc.update_price("TEST", price).unwrap();
         }
         
         assert!(calc.has_sufficient_data("TEST"));

@@ -18,7 +18,7 @@ pub enum TimeFrame {
 }
 
 impl TimeFrame {
-    pub fn to_minutes(&self) -> i64 {
+    pub fn to_minutes(self) -> i64 {
         match self {
             TimeFrame::Minutes15 => 15,
             TimeFrame::Hours1 => 60,
@@ -34,7 +34,7 @@ impl TimeFrame {
         }
     }
 
-    pub fn to_duration(&self) -> Duration {
+    pub fn to_duration(self) -> Duration {
         Duration::minutes(self.to_minutes())
     }
 
@@ -149,6 +149,12 @@ pub struct MarketDataHandler {
     security_map: HashMap<String, SecurityInfo>,
 }
 
+impl Default for MarketDataHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MarketDataHandler {
     pub fn new() -> Self {
         Self {
@@ -194,7 +200,7 @@ impl MarketDataHandler {
         if let Some(history) = self.price_history.get_mut(symbol) {
             // Convert time::OffsetDateTime to chrono::DateTime<Utc>
             let datetime = DateTime::from_timestamp(timestamp.unix_timestamp(), 0)
-                .unwrap_or_else(|| Utc::now());
+                .unwrap_or_else(Utc::now);
 
             history.prices.push((datetime, price));
 
@@ -337,7 +343,7 @@ impl MarketDataHandler {
         let volatility = variance.sqrt();
 
         // Cap volatility at reasonable levels and ensure it's not zero
-        let capped_volatility = volatility.max(0.0001).min(2.0); // Min 0.01%, Max 200%
+        let capped_volatility = volatility.clamp(0.0001, 2.0); // Min 0.01%, Max 200%
 
         // Calculate annualized volatility (assuming 252 trading days)
         let annualized_volatility = capped_volatility * (252.0_f64).sqrt();
@@ -522,7 +528,7 @@ impl MarketDataHandler {
         let volatility = variance.sqrt();
 
         // Cap volatility at reasonable levels and ensure it's not zero
-        let capped_volatility = volatility.max(0.0001).min(2.0);
+        let capped_volatility = volatility.clamp(0.0001, 2.0);
 
         // Scale volatility based on timeframe (annualize it)
         let scaling_factor = match timeframe {
