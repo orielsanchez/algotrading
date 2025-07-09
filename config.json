@@ -81,7 +81,7 @@
     "rebalance_frequency_minutes": 60
   },
   "risk_config": {
-    "max_position_size": 50000.0,
+    "max_position_size": 2.0,
     "max_portfolio_exposure": 0.95,
     "stop_loss_percentage": 0.02,
     "take_profit_percentage": 0.05,

@@ -1,5 +1,5 @@
-use chrono::{Datelike, Local, NaiveDate, Weekday};
 use anyhow::Result;
+use chrono::{Datelike, Local, NaiveDate, Weekday};
 
 /// Futures contract months and their codes
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -78,7 +78,7 @@ impl ContractMonth {
 /// Calculate the front month contract for a given futures symbol
 pub fn get_front_month_contract(symbol: &str) -> Result<(String, String)> {
     let today = Local::now().date_naive();
-    
+
     // Get the appropriate expiry based on the symbol
     let (year, month, expiry_date) = match symbol {
         "ES" | "NQ" => {
@@ -98,23 +98,23 @@ pub fn get_front_month_contract(symbol: &str) -> Result<(String, String)> {
             get_quarterly_expiry(today)
         }
     };
-    
+
     // Format expiry as YYYYMMDD
     let expiry = format!("{:04}{:02}{:02}", year, month, expiry_date.day());
-    
+
     // Format contract month as YYYYMM
     let contract_month = format!("{:04}{:02}", year, month);
-    
+
     Ok((expiry, contract_month))
 }
 
 /// Get the next quarterly expiry (Mar, Jun, Sep, Dec)
 fn get_quarterly_expiry(current_date: NaiveDate) -> (i32, u32, NaiveDate) {
     let quarterly_months = vec![3, 6, 9, 12];
-    
+
     let current_year = current_date.year();
     let current_month = current_date.month();
-    
+
     // Find the next quarterly month
     for &month in &quarterly_months {
         if month > current_month {
@@ -124,7 +124,7 @@ fn get_quarterly_expiry(current_date: NaiveDate) -> (i32, u32, NaiveDate) {
             }
         }
     }
-    
+
     // If no quarterly month found in current year, use March of next year
     let next_year = current_year + 1;
     let expiry = get_third_friday(next_year, 3);
@@ -134,7 +134,7 @@ fn get_quarterly_expiry(current_date: NaiveDate) -> (i32, u32, NaiveDate) {
 /// Get the third Friday of a given month
 fn get_third_friday(year: i32, month: u32) -> NaiveDate {
     let first_day = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
-    
+
     // Find the first Friday
     let days_until_friday = match first_day.weekday() {
         Weekday::Mon => 4,
@@ -145,65 +145,91 @@ fn get_third_friday(year: i32, month: u32) -> NaiveDate {
         Weekday::Sat => 6,
         Weekday::Sun => 5,
     };
-    
+
     // Third Friday is first Friday + 14 days
     first_day + chrono::Duration::days((days_until_friday + 14) as i64)
 }
 
 /// Get monthly expiry based on a specific day minus business days
-fn get_monthly_expiry(current_date: NaiveDate, day_of_month: u32, business_days_before: u32) -> (i32, u32, NaiveDate) {
+fn get_monthly_expiry(
+    current_date: NaiveDate,
+    day_of_month: u32,
+    business_days_before: u32,
+) -> (i32, u32, NaiveDate) {
     let current_year = current_date.year();
     let current_month = current_date.month();
-    
+
     // Try current month first
-    if let Some(expiry) = calculate_business_days_before(current_year, current_month, day_of_month, business_days_before) {
+    if let Some(expiry) = calculate_business_days_before(
+        current_year,
+        current_month,
+        day_of_month,
+        business_days_before,
+    ) {
         if expiry > current_date {
             return (current_year, current_month, expiry);
         }
     }
-    
+
     // Try next month
     let (next_year, next_month) = if current_month == 12 {
         (current_year + 1, 1)
     } else {
         (current_year, current_month + 1)
     };
-    
-    if let Some(expiry) = calculate_business_days_before(next_year, next_month, day_of_month, business_days_before) {
+
+    if let Some(expiry) =
+        calculate_business_days_before(next_year, next_month, day_of_month, business_days_before)
+    {
         return (next_year, next_month, expiry);
     }
-    
+
     // Fallback
-    (next_year, next_month, NaiveDate::from_ymd_opt(next_year, next_month, 15).unwrap())
+    (
+        next_year,
+        next_month,
+        NaiveDate::from_ymd_opt(next_year, next_month, 15).unwrap(),
+    )
 }
 
 /// Get monthly expiry based on business days from end of month
-fn get_monthly_expiry_end_of_month(current_date: NaiveDate, business_days_before: u32) -> (i32, u32, NaiveDate) {
+fn get_monthly_expiry_end_of_month(
+    current_date: NaiveDate,
+    business_days_before: u32,
+) -> (i32, u32, NaiveDate) {
     let current_year = current_date.year();
     let current_month = current_date.month();
-    
+
     // Try current month first
     let last_day = get_last_day_of_month(current_year, current_month);
-    if let Some(expiry) = calculate_business_days_before(current_year, current_month, last_day, business_days_before) {
+    if let Some(expiry) =
+        calculate_business_days_before(current_year, current_month, last_day, business_days_before)
+    {
         if expiry > current_date {
             return (current_year, current_month, expiry);
         }
     }
-    
+
     // Try next month
     let (next_year, next_month) = if current_month == 12 {
         (current_year + 1, 1)
     } else {
         (current_year, current_month + 1)
     };
-    
+
     let last_day = get_last_day_of_month(next_year, next_month);
-    if let Some(expiry) = calculate_business_days_before(next_year, next_month, last_day, business_days_before) {
+    if let Some(expiry) =
+        calculate_business_days_before(next_year, next_month, last_day, business_days_before)
+    {
         return (next_year, next_month, expiry);
     }
-    
+
     // Fallback
-    (next_year, next_month, NaiveDate::from_ymd_opt(next_year, next_month, 15).unwrap())
+    (
+        next_year,
+        next_month,
+        NaiveDate::from_ymd_opt(next_year, next_month, 15).unwrap(),
+    )
 }
 
 /// Get the last day of a month
@@ -228,28 +254,33 @@ fn is_leap_year(year: i32) -> bool {
 }
 
 /// Calculate a date that is N business days before a given day
-fn calculate_business_days_before(year: i32, month: u32, day: u32, business_days: u32) -> Option<NaiveDate> {
+fn calculate_business_days_before(
+    year: i32,
+    month: u32,
+    day: u32,
+    business_days: u32,
+) -> Option<NaiveDate> {
     let target_date = NaiveDate::from_ymd_opt(year, month, day)?;
     let mut current_date = target_date;
     let mut business_days_count = 0;
-    
+
     while business_days_count < business_days {
         current_date = current_date.pred_opt()?;
-        
+
         // Skip weekends
         match current_date.weekday() {
             Weekday::Sat | Weekday::Sun => continue,
             _ => business_days_count += 1,
         }
     }
-    
+
     Some(current_date)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_contract_month_conversion() {
         assert_eq!(ContractMonth::March.code(), 'H');
@@ -257,30 +288,42 @@ mod tests {
         assert_eq!(ContractMonth::from_month(3).unwrap(), ContractMonth::March);
         assert_eq!(ContractMonth::June.to_month(), 6);
     }
-    
+
     #[test]
     fn test_third_friday() {
         // Test known third Fridays
-        assert_eq!(get_third_friday(2025, 3), NaiveDate::from_ymd_opt(2025, 3, 21).unwrap());
-        assert_eq!(get_third_friday(2025, 6), NaiveDate::from_ymd_opt(2025, 6, 20).unwrap());
-        assert_eq!(get_third_friday(2025, 9), NaiveDate::from_ymd_opt(2025, 9, 19).unwrap());
-        assert_eq!(get_third_friday(2025, 12), NaiveDate::from_ymd_opt(2025, 12, 19).unwrap());
+        assert_eq!(
+            get_third_friday(2025, 3),
+            NaiveDate::from_ymd_opt(2025, 3, 21).unwrap()
+        );
+        assert_eq!(
+            get_third_friday(2025, 6),
+            NaiveDate::from_ymd_opt(2025, 6, 20).unwrap()
+        );
+        assert_eq!(
+            get_third_friday(2025, 9),
+            NaiveDate::from_ymd_opt(2025, 9, 19).unwrap()
+        );
+        assert_eq!(
+            get_third_friday(2025, 12),
+            NaiveDate::from_ymd_opt(2025, 12, 19).unwrap()
+        );
     }
-    
+
     #[test]
     fn test_get_front_month_contract() {
         // Test ES and NQ futures
         let (expiry, month) = get_front_month_contract("ES").unwrap();
-        
+
         // Verify format
         assert_eq!(expiry.len(), 8); // YYYYMMDD
-        assert_eq!(month.len(), 6);  // YYYYMM
-        
+        assert_eq!(month.len(), 6); // YYYYMM
+
         // Verify the expiry is in the future
         let today = Local::now().date_naive();
         let expiry_date = NaiveDate::parse_from_str(&expiry, "%Y%m%d").unwrap();
         assert!(expiry_date > today, "Expiry date should be in the future");
-        
+
         // Test NQ futures
         let (nq_expiry, nq_month) = get_front_month_contract("NQ").unwrap();
         assert_eq!(nq_expiry.len(), 8);

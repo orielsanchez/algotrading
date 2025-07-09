@@ -1,9 +1,9 @@
+use crate::futures_utils::get_front_month_contract;
+use crate::security_types::SecurityType;
 use anyhow::Result;
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use crate::security_types::SecurityType;
-use crate::futures_utils::get_front_month_contract;
-use log::{info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradingConfig {
@@ -26,6 +26,10 @@ pub struct StrategyConfig {
     pub momentum_threshold: f64,
     pub position_size: f64,
     pub rebalance_frequency_minutes: u64,
+    #[serde(default = "default_target_volatility")]
+    pub target_volatility: f64,
+    #[serde(default = "default_volatility_halflife")]
+    pub volatility_halflife: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,29 +70,66 @@ pub struct RiskConfig {
     pub margin_buffer_percentage: f64,
 }
 
-fn default_max_margin_utilization() -> f64 { 0.70 }
-fn default_min_excess_liquidity() -> f64 { 10000.0 }
-fn default_futures_position_limit() -> f64 { 10.0 }
-fn default_margin_call_threshold() -> f64 { 0.85 }
-fn default_margin_buffer_percentage() -> f64 { 0.20 }
+impl Default for RiskConfig {
+    fn default() -> Self {
+        Self {
+            max_position_size: 0.5,  // 50% of portfolio per position
+            max_portfolio_exposure: 1.0,  // 100% max exposure
+            stop_loss_percentage: 0.02,  // 2% stop loss
+            take_profit_percentage: 0.04,  // 4% take profit
+            max_margin_utilization: default_max_margin_utilization(),
+            min_excess_liquidity: default_min_excess_liquidity(),
+            futures_position_limit: default_futures_position_limit(),
+            margin_call_threshold: default_margin_call_threshold(),
+            margin_buffer_percentage: default_margin_buffer_percentage(),
+        }
+    }
+}
+
+fn default_max_margin_utilization() -> f64 {
+    0.70
+}
+fn default_min_excess_liquidity() -> f64 {
+    10000.0
+}
+fn default_futures_position_limit() -> f64 {
+    10.0
+}
+fn default_margin_call_threshold() -> f64 {
+    0.85
+}
+fn default_margin_buffer_percentage() -> f64 {
+    0.20
+}
+
+fn default_target_volatility() -> f64 {
+    0.25 // 25% annualized target volatility
+}
+
+fn default_volatility_halflife() -> f64 {
+    32.0 // 32-day half-life for EWMA
+}
 
 impl TradingConfig {
     pub fn load() -> Result<Self> {
-        let config_str = fs::read_to_string("config.json")
-            .unwrap_or_else(|_| Self::default_config_json());
-        
+        Self::load_from_file("config.json")
+    }
+
+    pub fn load_from_file(path: &str) -> Result<Self> {
+        let config_str = fs::read_to_string(path).unwrap_or_else(|_| Self::default_config_json());
+
         let mut config: TradingConfig = serde_json::from_str(&config_str)?;
-        
+
         // Update futures contracts with current expiry dates
         config.update_futures_expiries()?;
-        
+
         Ok(config)
     }
-    
+
     fn default_config_json() -> String {
         serde_json::to_string_pretty(&Self::default()).unwrap()
     }
-    
+
     /// Update futures contracts with current front-month expiry dates
     fn update_futures_expiries(&mut self) -> Result<()> {
         for security in &mut self.strategy_config.securities {
@@ -163,6 +204,8 @@ impl Default for TradingConfig {
                 momentum_threshold: 0.02,
                 position_size: 10000.0,
                 rebalance_frequency_minutes: 60,
+                target_volatility: default_target_volatility(),
+                volatility_halflife: default_volatility_halflife(),
             },
             risk_config: RiskConfig {
                 max_position_size: 50000.0,

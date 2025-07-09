@@ -1,153 +1,204 @@
 # AlgoTrading Bot Development Roadmap
 
 ## Project Vision
-Build a statistically-validated, production-ready momentum trading system with robust risk management and comprehensive backtesting capabilities.
 
-## Phase 1: Foundation & Testing Infrastructure
+Build a systematic, volatility-targeted momentum trading system following Robert Carver's principles with robust risk management, signal strength scaling, and comprehensive backtesting capabilities.
+
+## Phase 1: Carver Framework Foundation
+
 **Timeline: Weeks 1-2**
 
-### Testing Framework
-- [ ] Set up Rust testing infrastructure with cargo test
-- [ ] Create mock TWS API client for testing
-- [ ] Implement test data generators for market scenarios
-- [ ] Add property-based testing with proptest crate
-- [ ] Set up continuous integration with GitHub Actions
-- [ ] Add code coverage reporting with tarpaulin
+### Volatility Targeting Infrastructure
+
+- [ ] Implement EWMA volatility calculation for instruments
+- [ ] Create portfolio-level volatility targeting (25% annual target)
+- [ ] Add volatility-adjusted position sizing engine
+- [ ] Build forecast diversification multiplier framework
+- [ ] Replace fixed position sizing with dynamic risk-based sizing
 
 ### Statistical Testing Library
+
 - [ ] Add statistical dependencies (statrs, ndarray, polars)
 - [ ] Create statistical utilities module
 - [ ] Implement Sharpe ratio calculation
 - [ ] Add maximum drawdown analysis
 - [ ] Create win rate and profit factor calculations
 - [ ] Implement significance tests (t-test, Mann-Whitney U)
+- [ ] Add Information Ratio calculations for signal evaluation
 
 ### Data Management
+
 - [ ] Implement historical data storage using Parquet files
 - [ ] Create data loader for backtesting
-- [ ] Add data quality validation
+- [ ] Add data quality validation with spike detection
 - [ ] Build price adjustment for splits/dividends
 - [ ] Design efficient time series storage schema
+- [ ] Add transaction cost tracking and modeling
 
-## Phase 2: Backtesting Engine
+## Phase 2: Systematic Backtesting Engine
+
 **Timeline: Weeks 3-4**
 
-### Core Engine
+### Core Engine with Transaction Cost Integration
+
 - [ ] Build event-driven backtesting framework
 - [ ] Implement order execution simulator with realistic slippage
-- [ ] Add commission and fee modeling
+- [ ] Add spread cost modeling for Carver-style analysis
 - [ ] Create multi-asset portfolio simulation
 - [ ] Add market hours and trading calendar support
+- [ ] Implement position inertia thresholds to reduce turnover
 
-### Performance Analytics
+### Performance Analytics with Carver Metrics
+
 - [ ] Implement trade-level analytics
   - [ ] Entry/exit analysis
   - [ ] Holding period statistics
   - [ ] Win/loss distribution
-  - [ ] Long vs short performance attribution
+  - [ ] Signal strength vs performance correlation
 - [ ] Add portfolio-level metrics
   - [ ] Daily/monthly returns
-  - [ ] Rolling volatility
-  - [ ] Correlation analysis
-  - [ ] Risk-adjusted returns
-  - [ ] Long/short contribution analysis
+  - [ ] Rolling volatility tracking vs target
+  - [ ] Correlation analysis between instruments
+  - [ ] Risk-adjusted returns (Sharpe, Sortino)
+  - [ ] Forecast diversification effectiveness
 
-### Statistical Validation
+### Statistical Validation with Robustness Testing
+
 - [ ] Implement walk-forward analysis framework
 - [ ] Add Monte Carlo simulation for strategy robustness
 - [ ] Create bootstrap confidence intervals
 - [ ] Build out-of-sample testing framework
 - [ ] Add parameter stability analysis
+- [ ] Test performance across volatility regimes
 
-## Phase 3: Strategy Enhancement
+## Phase 3: Carver Signal Enhancement
+
 **Timeline: Weeks 5-6**
 
-### Advanced Momentum Signals
-- [ ] Implement multiple timeframe momentum analysis
-- [ ] Add volume-weighted momentum calculations
-- [ ] Create relative strength vs market/sector benchmarks
-- [ ] Build momentum decay analysis
-- [ ] Add momentum persistence metrics
+### Multi-Timeframe Momentum with Forecast Diversification
 
-### Short Selling Implementation
+- [ ] Implement Carver's EWMAC (Exponentially Weighted Moving Average Crossover)
+- [ ] Add multiple momentum timeframes (2-8 day, 4-16 day, 8-32 day, 16-64 day)
+- [ ] Create forecast diversification multiplier across timeframes
+- [ ] Implement signal strength scaling (-20 to +20 range)
+- [ ] Add risk-adjusted momentum calculation (volatility normalized)
+- [ ] Build forecast capping and scaling mechanisms
+- [ ] Create breakout-style momentum signals
+- [ ] Add carry-based signals for forex pairs
+
+### Position Inertia and Transaction Cost Optimization
+
+- [ ] Implement position inertia buffers (10% threshold)
+- [ ] Add transaction cost awareness to position sizing
+- [ ] Create optimal rebalancing frequency analysis
+- [ ] Build turnover cost vs signal strength optimization
+- [ ] Add spread impact modeling
+- [ ] Implement smart order execution timing
+
+### Short Selling with Carver Framework
+
 - [ ] Add configuration flags for long-only vs long/short strategies
 - [ ] Implement negative momentum signals for short candidates
-- [ ] Create short position sizing logic with appropriate limits
-- [ ] Add short-specific risk controls (short squeeze protection)
-- [ ] Implement proper margin requirement calculations
+- [ ] Create volatility-adjusted short position sizing
+- [ ] Add short-specific risk controls and margin calculations
+- [ ] Implement asymmetric position limits for shorts
 - [ ] Add short interest and borrow cost considerations
 
-### Signal Validation
-- [ ] Implement statistical significance testing for signals
-- [ ] Calculate information ratio for each signal
-- [ ] Add feature importance analysis
+### Signal Validation and Robustness
+
+- [ ] Implement statistical significance testing for each signal
+- [ ] Calculate information ratio for individual forecasts
+- [ ] Add forecast correlation analysis and decorrelation
 - [ ] Create cross-validation for parameter selection
-- [ ] Build signal correlation matrix
-- [ ] Validate long vs short signal effectiveness separately
+- [ ] Build signal stability analysis across market regimes
+- [ ] Validate forecast accuracy and scaling
+- [ ] Add minimum signal strength thresholds
+- [ ] Implement forecast combination optimization
 
-### Market Regime Detection
-- [ ] Implement trending vs ranging market classification
-- [ ] Add volatility regime detection
-- [ ] Create correlation regime monitoring
-- [ ] Build drawdown prediction model
-- [ ] Add market stress indicators
+## Phase 4: Carver Risk Management Framework
 
-## Phase 4: Risk Management
 **Timeline: Weeks 7-8**
 
-### Dynamic Position Sizing
-- [ ] Implement Kelly criterion for optimal sizing
-- [ ] Add risk parity allocation
-- [ ] Create volatility-based position sizing
-- [ ] Build maximum adverse excursion limits
-- [ ] Add correlation-adjusted position limits
-- [ ] Implement separate sizing for long and short positions
-- [ ] Add gross/net exposure limits
+### Volatility-Targeted Position Sizing
 
-### Portfolio Optimization
-- [ ] Implement mean-variance optimization
-- [ ] Add Black-Litterman model
-- [ ] Create risk budgeting framework
-- [ ] Build efficient frontier analysis
-- [ ] Add portfolio rebalancing logic
+- [ ] Implement Carver's instrument weight formula
+- [ ] Create portfolio-level volatility targeting (25% annual)
+- [ ] Add EWMA volatility estimation with appropriate half-life
+- [ ] Build instrument diversification multiplier (IDM)
+- [ ] Implement forecast diversification multiplier (FDM)
+- [ ] Add correlation-adjusted position sizing
+- [ ] Create dynamic leverage adjustment
+- [ ] Build capital allocation across instruments
 
-### Risk Metrics
-- [ ] Calculate Value at Risk (VaR)
-- [ ] Implement Conditional VaR (CVaR)
-- [ ] Create stress testing scenarios
-- [ ] Add tail risk analysis
-- [ ] Build real-time risk monitoring
-- [ ] Add short-specific risk metrics (short squeeze risk)
-- [ ] Implement margin usage monitoring
+### Portfolio Risk Budgeting
 
-## Phase 5: Machine Learning Integration
+- [ ] Implement equal risk contribution across instruments
+- [ ] Add marginal contribution to risk calculations
+- [ ] Create risk attribution analysis
+- [ ] Build concentration risk monitoring
+- [ ] Add maximum position limits per instrument
+- [ ] Implement portfolio rebalancing with inertia
+- [ ] Create risk budget violation alerts
+
+### Carver-Style Risk Metrics
+
+- [ ] Calculate portfolio volatility vs target tracking
+- [ ] Implement maximum leverage constraints
+- [ ] Create correlation monitoring and regime detection
+- [ ] Add tail risk analysis with stress testing
+- [ ] Build real-time risk monitoring dashboard
+- [ ] Implement margin usage optimization
+- [ ] Add drawdown prediction and management
+- [ ] Create performance attribution by risk factor
+- [ ] Build forecast accuracy monitoring
+
+## Phase 5: Advanced Signal Generation & ML Integration
+
 **Timeline: Weeks 9-10**
 
-### ML Infrastructure
+### Systematic Signal Enhancement
+
+- [ ] Implement Carver's breakout signals (multiple timeframes)
+- [ ] Add mean reversion signals for ranging markets
+- [ ] Create carry signals for forex and bonds
+- [ ] Build momentum acceleration signals
+- [ ] Add volatility breakout indicators
+- [ ] Implement trend strength measurement
+- [ ] Create regime-dependent signal weights
+
+### ML Infrastructure for Signal Improvement
+
 - [ ] Add ML dependencies (candle, smartcore)
-- [ ] Create feature engineering pipeline
-- [ ] Implement train/validation/test splits
+- [ ] Create feature engineering pipeline for market features
+- [ ] Implement train/validation/test splits with time awareness
 - [ ] Build model versioning system
-- [ ] Add experiment tracking
+- [ ] Add experiment tracking for signal combinations
+- [ ] Create walk-forward ML validation framework
 
-### Predictive Models
-- [ ] Build momentum strength prediction model
-- [ ] Create market regime classifier
-- [ ] Implement volatility forecasting
-- [ ] Add feature selection algorithms
-- [ ] Build ensemble methods
+### Predictive Models for Signal Enhancement
 
-### Model Validation
-- [ ] Implement cross-validation framework
-- [ ] Add feature importance analysis
-- [ ] Create model stability testing
-- [ ] Build performance attribution
-- [ ] Add A/B testing framework
+- [ ] Build momentum persistence prediction model
+- [ ] Create market regime classifier for signal selection
+- [ ] Implement volatility forecasting for position sizing
+- [ ] Add signal combination optimization
+- [ ] Build forecast accuracy prediction
+- [ ] Create dynamic signal weight adjustment
+
+### Model Validation with Carver Principles
+
+- [ ] Implement cross-validation framework with time series
+- [ ] Add feature importance analysis for signal components
+- [ ] Create model stability testing across regimes
+- [ ] Build performance attribution by signal type
+- [ ] Add A/B testing framework for signal improvements
+- [ ] Validate ML signals don't overfit vs simple rules
 
 ## Phase 6: Production Hardening
+
 **Timeline: Weeks 11-12**
 
 ### System Reliability
+
 - [ ] Implement circuit breakers for extreme conditions
 - [ ] Add automated health checks
 - [ ] Create performance monitoring
@@ -155,6 +206,7 @@ Build a statistically-validated, production-ready momentum trading system with r
 - [ ] Add connection resilience
 
 ### Operational Features
+
 - [ ] Create live performance dashboard
 - [ ] Build automated reporting system
 - [ ] Add alert system for anomalies
@@ -162,6 +214,7 @@ Build a statistically-validated, production-ready momentum trading system with r
 - [ ] Create audit trail system
 
 ### Testing & Documentation
+
 - [ ] Achieve >90% test coverage
 - [ ] Create integration test suite
 - [ ] Build performance benchmarks
@@ -169,9 +222,11 @@ Build a statistically-validated, production-ready momentum trading system with r
 - [ ] Create runbooks for operations
 
 ## Phase 7: Advanced Features
+
 **Timeline: Weeks 13-14**
 
 ### Multi-Factor Models
+
 - [ ] Integrate value factors (P/E, P/B)
 - [ ] Add quality factors (ROE, margins)
 - [ ] Implement low volatility factor
@@ -181,6 +236,7 @@ Build a statistically-validated, production-ready momentum trading system with r
 - [ ] Add sector-neutral strategies
 
 ### Execution Optimization
+
 - [ ] Implement smart order routing
 - [ ] Add market impact models
 - [ ] Create optimal execution algorithms
@@ -188,6 +244,7 @@ Build a statistically-validated, production-ready momentum trading system with r
 - [ ] Add liquidity detection
 
 ### Alternative Data
+
 - [ ] Integrate sentiment indicators
 - [ ] Add options flow analysis
 - [ ] Implement sector rotation signals
@@ -195,9 +252,11 @@ Build a statistically-validated, production-ready momentum trading system with r
 - [ ] Build news event processing
 
 ## Phase 8: Deployment & Scaling
+
 **Timeline: Weeks 15-16**
 
 ### Infrastructure
+
 - [ ] Containerize application with Docker
 - [ ] Create Kubernetes deployment configs
 - [ ] Implement auto-scaling policies
@@ -205,6 +264,7 @@ Build a statistically-validated, production-ready momentum trading system with r
 - [ ] Build disaster recovery
 
 ### Performance Optimization
+
 - [ ] Profile and optimize critical paths
 - [ ] Implement parallel signal processing
 - [ ] Add caching layer
@@ -212,6 +272,7 @@ Build a statistically-validated, production-ready momentum trading system with r
 - [ ] Create performance benchmarks
 
 ### Monitoring & Maintenance
+
 - [ ] Set up comprehensive logging
 - [ ] Create performance dashboards
 - [ ] Implement anomaly detection
@@ -220,30 +281,39 @@ Build a statistically-validated, production-ready momentum trading system with r
 
 ## Success Criteria
 
-### Performance Metrics
-- [ ] Sharpe ratio > 1.5
+### Carver Framework Performance Metrics
+
+- [ ] Sharpe ratio > 1.5 (after transaction costs)
+- [ ] Portfolio volatility within 20-30% target range
 - [ ] Maximum drawdown < 15%
-- [ ] Win rate > 55%
-- [ ] Profit factor > 1.5
-- [ ] Long/short information ratio > 0.5
-- [ ] Market-neutral Sharpe > 1.0
+- [ ] Information ratio > 0.5 for each signal type
+- [ ] Forecast diversification multiplier > 1.2
+- [ ] Signal combination effectiveness vs individual signals
+- [ ] Position sizing accuracy within 5% of volatility target
 
 ### Technical Metrics
+
 - [ ] Test coverage > 90%
 - [ ] Backtesting speed > 1000 trades/second
 - [ ] Live trading latency < 10ms
 - [ ] System uptime > 99.9%
+- [ ] Real-time correlation monitoring operational
+- [ ] Volatility estimation updates within 1 minute
 
-### Statistical Validation
+### Statistical Validation with Robustness
+
 - [ ] Significant alpha after costs (p < 0.05)
-- [ ] Stable performance across regimes
-- [ ] Positive walk-forward results
-- [ ] Low parameter sensitivity
-- [ ] Long and short signals both statistically significant
+- [ ] Stable performance across volatility regimes
+- [ ] Positive walk-forward results over 3+ years
+- [ ] Low parameter sensitivity (performance stable ±25% parameters)
+- [ ] Signal decorrelation maintained over time
+- [ ] Transaction cost impact < 0.5% annually
+- [ ] Forecast accuracy > 52% directional prediction
 
 ## Dependencies
 
 ### External Libraries
+
 ```toml
 # Core
 tokio = { version = "1.35", features = ["full"] }
@@ -273,6 +343,7 @@ mockall = "0.12"
 ```
 
 ### Development Tools
+
 - Rust 1.75+ (2024 edition)
 - cargo-tarpaulin for coverage
 - cargo-flamegraph for profiling
@@ -282,20 +353,45 @@ mockall = "0.12"
 ## Risk Mitigation
 
 ### Technical Risks
+
 - [ ] API compatibility changes → Version pinning, integration tests
 - [ ] Performance degradation → Continuous benchmarking
 - [ ] Data quality issues → Validation layer, anomaly detection
 - [ ] System failures → Redundancy, graceful degradation
 
 ### Market Risks
+
 - [ ] Strategy decay → Regular revalidation, adaptive parameters
 - [ ] Regime changes → Multi-regime models, regime detection
 - [ ] Liquidity issues → Position limits, market impact models
 - [ ] Black swan events → Circuit breakers, risk limits
 
-## Next Steps
+## Implementation Priority (Carver-Enhanced)
 
-1. Set up testing infrastructure (Phase 1)
-2. Create statistical utilities module
-3. Design backtesting architecture
-4. Start implementing core components with TDD approach
+### Immediate Next Steps (This Week)
+1. **Volatility Targeting Foundation** 
+   - Implement EWMA volatility calculation
+   - Create portfolio volatility targeting framework
+   - Replace fixed $200 position sizing with volatility-adjusted sizing
+
+2. **Multi-Timeframe Momentum Signals**
+   - Add 2-8, 4-16, 8-32, 16-64 day momentum calculations
+   - Implement forecast combination with diversification multiplier
+   - Add signal strength scaling (-20 to +20 range)
+
+3. **Transaction Cost Integration**
+   - Add spread cost modeling to backtesting
+   - Implement position inertia thresholds (10% buffer)
+   - Create turnover optimization analysis
+
+### Month 1 Focus
+- Complete Carver framework foundation (volatility targeting, forecast diversification)
+- Enhance momentum signals with multiple timeframes
+- Add transaction cost awareness and position inertia
+- Build comprehensive backtesting with Carver metrics
+
+### Month 2-3 Focus  
+- Advanced signal generation (EWMAC, breakouts, carry)
+- Portfolio risk budgeting and correlation monitoring
+- Statistical validation with walk-forward analysis
+- ML integration for signal enhancement

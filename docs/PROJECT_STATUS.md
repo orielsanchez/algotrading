@@ -8,8 +8,9 @@
 - [x] Real-time market data subscription via IBKR API
 - [x] Automatic futures contract expiry updates
 - [x] Account data integration (positions, balances, margins)
-- [x] Multi-asset support (stocks and futures)
+- [x] Multi-asset support (stocks, futures, and forex)
 - [x] Configuration-driven architecture
+- [x] Historical data loading for strategy warmup
 
 ### Momentum Trading Strategy
 - [x] 20-day lookback period momentum calculation
@@ -17,27 +18,34 @@
 - [x] Position tracking and P&L calculations
 - [x] Automated order placement
 
-### Margin Management (NEW)
+### Margin Management
 - [x] Comprehensive margin calculation module
 - [x] Pre-trade margin validation for futures
 - [x] Real-time margin health monitoring
 - [x] Position-specific margin tracking
 - [x] Configurable risk limits:
   - Maximum margin utilization: 70%
-  - Minimum excess liquidity: $10,000
+  - Minimum excess liquidity: $100 (adjusted for small accounts)
   - Margin call threshold: 85%
 - [x] Different margin requirements per futures contract
+- [x] Forex leverage support (50:1)
 
 ### Risk Management
 - [x] Maximum position size limits
 - [x] Portfolio exposure limits
 - [x] Stop loss and take profit parameters
 
-### Statistical Analysis (NEW)
+### Statistical Analysis
 - [x] Portfolio performance metrics (Sharpe ratio, Sortino ratio)
 - [x] Maximum drawdown calculation
 - [x] Win rate and profit factor analysis
 - [x] Information ratio calculations
+
+### Forex Trading Support
+- [x] Proper forex contract definitions (IDEALPRO exchange)
+- [x] Currency pair configuration (EUR/USD, GBP/USD, USD/JPY, etc.)
+- [x] MidPoint data for forex (instead of Trades)
+- [x] Forex-specific position sizing
 
 ## In Progress 🚧
 
@@ -96,12 +104,15 @@
 ## Configuration Notes
 
 ### Current Trading Parameters
-- Securities: 7 stocks + 2 futures (ES, NQ)
+- Securities: 7 forex pairs (EUR/USD, GBP/USD, USD/JPY, AUD/USD, USD/CAD, USD/CHF, NZD/USD)
 - Rebalance frequency: 60 minutes
-- Momentum threshold: 2%
+- Momentum threshold: 0.01% (lowered for forex)
+- Position size: $200 (20% of $1000 account)
+- Max position size: $500 (50% of account)
 - Paper trading port: 7497
 
 ### Required Market Data Subscriptions
+- IDEALPRO for forex
 - NASDAQ (ISLAND) for stocks
 - CME for futures
 
@@ -130,9 +141,10 @@
 
 ## Known Issues
 
-1. Market data subscription errors in paper trading (non-blocking)
+1. ~Market data subscription errors in paper trading (non-blocking)~ Fixed for forex
 2. Some unused code warnings to clean up
 3. Need to implement connection resilience
+4. USD appears multiple times in forex config (USD/JPY, USD/CAD, USD/CHF)
 
 ## Repository Structure
 
@@ -153,6 +165,14 @@ algotrading/
 ├── Cargo.toml          # Dependencies
 └── docs/               # Documentation
 ```
+
+## Recent Updates (2025-07-09)
+
+- Fixed forex contract definitions (using ForexPair security type)
+- Implemented proper WhatToShow values for forex (MidPoint)
+- Adjusted position sizes for $1000 paper trading account
+- Fixed margin status calculation (lowercase key names)
+- Added historical data loading for momentum warmup
 
 ## Commit History
 

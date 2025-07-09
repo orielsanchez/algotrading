@@ -1,0 +1,56 @@
+{
+  "tws_config": {
+    "host": "127.0.0.1",
+    "port": 7497,
+    "client_id": 42
+  },
+  "strategy_config": {
+    "securities": [
+      {
+        "symbol": "EUR.USD",
+        "type": "Forex",
+        "exchange": "IDEALPRO",
+        "currency": "USD"
+      },
+      {
+        "symbol": "GBP.USD",
+        "type": "Forex",
+        "exchange": "IDEALPRO",
+        "currency": "USD"
+      },
+      {
+        "symbol": "USD.JPY",
+        "type": "Forex",
+        "exchange": "IDEALPRO",
+        "currency": "JPY"
+      },
+      {
+        "symbol": "USD.CAD",
+        "type": "Forex",
+        "exchange": "IDEALPRO",
+        "currency": "CAD"
+      },
+      {
+        "symbol": "USD.CHF",
+        "type": "Forex",
+        "exchange": "IDEALPRO",
+        "currency": "CHF"
+      }
+    ],
+    "lookback_period": 20,
+    "momentum_threshold": 0.0001,
+    "position_size": 200.0,
+    "rebalance_frequency_minutes": 60
+  },
+  "risk_config": {
+    "max_position_size": 50.0,
+    "max_portfolio_exposure": 0.95,
+    "stop_loss_percentage": 0.01,
+    "take_profit_percentage": 0.02,
+    "max_margin_utilization": 0.70,
+    "min_excess_liquidity": 100.0,
+    "futures_position_limit": 10.0,
+    "margin_call_threshold": 0.85,
+    "margin_buffer_percentage": 0.20
+  }
+}
