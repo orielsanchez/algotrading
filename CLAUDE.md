@@ -9,6 +9,7 @@ When you seem stuck or overly complex, I'll redirect you - my guidance helps you
 ## CRITICAL TRADING SAFETY RULES
 
 **NEVER compromise on trading safety:**
+
 - ALWAYS use paper trading ports (7497/7496) during development
 - NEVER hardcode live trading ports (7496/7495) without explicit confirmation
 - ALWAYS validate order parameters before submission
@@ -57,6 +58,7 @@ Use the Task tool and systematic workflows whenever a problem has multiple indep
 - **WHEN HOOKS FAIL WITH ERRORS** (BLOCKING)
 
 **Knowledge checkpoints:**
+
 - After every major component: Explain the design choices made
 - Before declaring "done": Can I implement this again without AI?
 - Weekly: Review and explain recent patterns learned
@@ -79,7 +81,7 @@ Run your project's quality checks (tests, linting, formatting)
 This includes:
 
 - Formatting issues (prettier, black, rustfmt, etc.)
-- Linting violations (eslint, flake8, clippy, etc.) 
+- Linting violations (eslint, flake8, clippy, etc.)
 - Forbidden patterns (defined by your project)
 - ALL other quality checks
 
@@ -94,16 +96,19 @@ Your code must be 100% clean. No exceptions.
 ## Knowledge Preservation Protocol
 
 ### Before AI Assistance:
+
 - State your hypothesis about the problem/approach
 - Identify which concepts you want to understand deeply
 - Set learning objectives: "I want to understand X pattern"
 
 ### During Implementation:
+
 - Explain the "why" behind each architectural decision
 - Connect new patterns to existing knowledge
 - Document mental models and intuition being built
 
 ### After Completion:
+
 - Summarize key insights gained
 - Update personal knowledge base with new patterns
 - Identify areas for deeper independent study
@@ -130,23 +135,27 @@ Your code must be 100% clean. No exceptions.
    - Extract patterns and improve architecture
 
 ### TDD Commands Integration:
+
 - Use `/tdd <feature>` to start test-first development
 - All `/next` commands should begin with test design
 - `/check` validates both implementation AND test quality
 
 ### TDD Learning Objectives:
+
 - **Requirements Clarity**: Tests force precise thinking about behavior
 - **Interface Design**: Write tests for the API you want to use
 - **Regression Protection**: Changes can't break existing behavior
 - **Documentation**: Tests serve as executable specifications
 
 ### Senior-Level TDD Thinking:
+
 - Tests reveal design problems before implementation
 - Good tests enable fearless refactoring
 - Test structure mirrors system architecture
 - Edge cases in tests prevent production surprises
 
 **Why This Works With AI:**
+
 - Tests provide unambiguous specifications
 - AI can't misinterpret test requirements
 - Failing tests guide AI toward correct solutions
@@ -157,7 +166,6 @@ Your code must be 100% clean. No exceptions.
 ### When context gets long:
 
 - Re-read this CLAUDE.md file
-- Summarize progress in a PROGRESS.md file
 - Document current state before major changes
 
 ### Maintain TODO.md:
@@ -190,6 +198,7 @@ Your code must be 100% clean. No exceptions.
 ### Rust-Specific Quality Standards:
 
 **CRITICAL for Trading Safety:**
+
 - **NO unwrap()** - use proper error handling with Result<T, E>
 - **NO expect()** - handle errors explicitly, don't panic
 - **NO panic!()** - trading bots must never panic in production
@@ -199,6 +208,7 @@ Your code must be 100% clean. No exceptions.
 - **ALWAYS** validate numeric conversions (no unchecked as casts)
 
 **Code Quality:**
+
 - Use `clippy` with `#![warn(clippy::all, clippy::pedantic)]`
 - Run `cargo fmt` before any commit
 - Use strong typing - avoid generic numeric types when specific
@@ -221,6 +231,7 @@ When you see "FORBIDDEN PATTERN", you MUST fix it immediately!
 ### Example Patterns:
 
 **JavaScript/TypeScript:**
+
 ```javascript
 // GOOD: Proper error handling
 async function fetchUserData(id: string): Promise<User | null> {
@@ -242,6 +253,7 @@ async function fetchUserData(id: string): Promise<User> {
 ```
 
 **Python:**
+
 ```python
 # GOOD: Proper error handling
 def parse_config(path: Path) -> Optional[Config]:
@@ -282,18 +294,20 @@ def parse_config(path: Path) -> Config:
 - **Portfolio calculations** → Test P&L, position tracking, rebalancing
 
 **Test Categories:**
+
 - **Unit Tests**: Individual functions (momentum calculations, order validation)
 - **Integration Tests**: Module interactions (strategy → orders → portfolio)
 - **Scenario Tests**: Market conditions (gaps, halts, disconnections)
 - **Backtesting**: Historical data validation before live deployment
 
 **Rust Testing Best Practices:**
+
 ```rust
 #[cfg(test)]
 mod tests {
     use super::*;
     use anyhow::Result;
-    
+
     #[test]
     fn test_momentum_calculation() -> Result<()> {
         // Test with known data
@@ -330,26 +344,31 @@ Cargo.toml           # Rust dependencies
 ### Key Trading Modules
 
 **connection.rs**: Manages TWS API connection
+
 - Handle reconnections gracefully
 - Monitor connection health
 - Queue orders during disconnections
 
 **market_data.rs**: Process real-time market data
+
 - Validate incoming prices
 - Handle missing/delayed data
 - Maintain price history for calculations
 
 **momentum.rs**: Core trading strategy
+
 - Calculate momentum scores
 - Generate trading signals
 - Rank securities by momentum
 
 **orders.rs**: Order execution
+
 - Validate order parameters
 - Track order status
 - Handle partial fills and rejections
 
 **portfolio.rs**: Position management
+
 - Track positions and P&L
 - Calculate exposure and risk metrics
 - Generate rebalancing orders
@@ -402,6 +421,7 @@ Would you like me to [specific improvement]?"
 ## AlgoTrading Development Commands
 
 ### Build & Run Commands:
+
 ```bash
 # Development build with all checks
 cargo build
@@ -422,6 +442,7 @@ cargo clippy -- -D warnings
 ```
 
 ### Trading-Specific Debugging:
+
 ```bash
 # Monitor trading activity
 RUST_LOG=info,algotrading::orders=debug cargo run
@@ -436,11 +457,13 @@ cargo run -- --dry-run
 ## Technical Mastery Progression
 
 ### Current Focus: Algorithmic Trading Systems
+
 - Target concept: Building reliable, safe trading systems in Rust
 - Learning method: Test-driven development with market scenarios
 - Knowledge gap: TWS API edge cases, market microstructure
 
 ### Trading-Specific Mastery Areas:
+
 - **Market Mechanics**: Understanding order types, market microstructure
 - **Risk Management**: Position sizing, exposure limits, drawdown control
 - **Strategy Development**: Backtesting, optimization, overfitting prevention
@@ -448,6 +471,7 @@ cargo run -- --dry-run
 - **Performance**: Low-latency order submission, efficient data processing
 
 ### Rust & Trading Mastery Progression:
+
 - **Async Programming**: Tokio patterns for concurrent market data and orders
 - **Error Handling**: Graceful degradation when market conditions change
 - **Testing Strategies**: Mocking market conditions and API responses
@@ -465,7 +489,9 @@ Avoid complex abstractions or "clever" code. The simple, obvious solution is pro
 ## Trading-Specific Best Practices
 
 ### Order Safety Checklist:
+
 Before ANY order submission:
+
 - [ ] Validate symbol exists and is tradable
 - [ ] Check position size against limits
 - [ ] Verify order type is appropriate
@@ -473,12 +499,14 @@ Before ANY order submission:
 - [ ] Log order details before submission
 
 ### Market Data Validation:
+
 - Sanity check prices (no negative values, reasonable ranges)
 - Handle stale data (timestamp checks)
 - Validate against previous values (spike detection)
 - Have fallback behavior for missing data
 
 ### Risk Management Implementation:
+
 ```rust
 // ALWAYS validate position sizes
 fn validate_position_size(size: f64, config: &Config) -> Result<f64> {
@@ -494,12 +522,14 @@ fn validate_position_size(size: f64, config: &Config) -> Result<f64> {
 ```
 
 ### Connection Resilience:
+
 - Implement exponential backoff for reconnections
 - Queue orders during disconnections
 - Alert on extended disconnections
 - Gracefully handle partial data
 
 ### Logging Standards:
+
 ```rust
 // Trading decisions MUST be logged
 info!("Momentum signal: {} score={:.4} rank={}", symbol, score, rank);
@@ -513,6 +543,7 @@ error!("Order rejected: {} reason: {}", order_id, reason);
 ### Current Project State (Updated: 2025-07-09)
 
 **📦 PUBLISHED ON GITHUB**: https://github.com/orielsanchez/algotrading
+
 - **License**: MIT (open source)
 - **Status**: Production-ready systematic trading framework
 - **Community**: Ready for contributions and feedback
@@ -520,6 +551,7 @@ error!("Order rejected: {} reason: {}", order_id, reason);
 ### Major Accomplishments Completed:
 
 #### ✅ Core Carver Framework Implementation
+
 - **Volatility Targeting**: 25% annual portfolio volatility with EWMA calculation (32-day half-life)
 - **Multi-Timeframe Momentum**: 4 timeframe signals (2-8, 4-16, 8-32, 16-64 days) with forecast diversification
 - **Signal Strength Scaling**: Carver's -20 to +20 range with quality multipliers and risk adjustment
@@ -527,23 +559,27 @@ error!("Order rejected: {} reason: {}", order_id, reason);
 - **Risk Management**: Position inertia buffers, exposure limits, and comprehensive controls
 
 #### ✅ Advanced Signal Generation
+
 - **Breakout Detection**: Multi-timeframe breakout signals with volatility adjustment
 - **Signal Integration**: Composite scoring with momentum and breakout combination
 - **Quality Filtering**: Sharpe ratio and volatility-based signal validation
 
 #### ✅ Order Execution & Risk Controls
+
 - **Smart Order Execution**: Limit orders with 1% price improvement over market prices
 - **IBKR API Integration**: Full compatibility with Interactive Brokers TWS
 - **Order Types**: Configurable market vs limit orders with dynamic switching
 - **Risk Budgeting**: Portfolio risk budgeting system with Equal Risk Contribution (ERC)
 
 #### ✅ Production Features
+
 - **Multi-Asset Support**: Stocks and forex pairs with appropriate risk scaling
 - **Real-time Processing**: Concurrent market data handling and order execution
 - **Comprehensive Logging**: Full audit trail of all trading decisions
 - **Configuration Management**: Flexible JSON-based configuration system
 
 ### Development Achievements:
+
 - **~8,000 lines of Rust code** with comprehensive error handling
 - **Production-ready architecture** following Carver's systematic trading principles
 - **Clean codebase** with no secrets, credentials, or sensitive information
@@ -551,12 +587,14 @@ error!("Order rejected: {} reason: {}", order_id, reason);
 - **MIT License** enabling open source collaboration
 
 ### Current Focus Areas:
+
 1. **Backtesting Engine**: Event-driven backtesting with transaction cost integration
 2. **Statistical Validation**: Sharpe ratio, drawdown analysis, and significance testing
 3. **Performance Analytics**: Trade-level analysis and portfolio metrics
 4. **Testing Coverage**: Comprehensive unit and integration test suite
 
 ### Community & Contributions:
+
 - **Buy Me a Coffee**: https://www.buymeacoffee.com/orielsanchez (for project support)
 - **GitHub Issues**: Open for bug reports and feature requests
 - **Pull Requests**: Welcome from the community
@@ -565,7 +603,8 @@ error!("Order rejected: {} reason: {}", order_id, reason);
 This project represents a significant achievement in systematic trading system development, implementing professional-grade algorithms with proper risk management and production-ready code quality.
 
 # important-instruction-reminders
+
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
