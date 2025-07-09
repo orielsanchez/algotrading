@@ -320,8 +320,8 @@ async fn main() -> Result<()> {
                     
                     // Apply risk budgeting to signals if enabled
                     if config.risk_config.enable_risk_budgeting {
-                        let mut port = portfolio.lock().await;
-                        let mut budgeter = risk_budgeter.lock().await;
+                        let port = portfolio.lock().await;
+                        let budgeter = risk_budgeter.lock().await;
                         
                         // Calculate risk budget allocations
                         match budgeter.calculate_risk_contributions(&port) {

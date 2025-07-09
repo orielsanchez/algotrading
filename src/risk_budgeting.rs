@@ -137,7 +137,7 @@ impl RiskBudgeter {
         let mut largest_contribution = 0.0;
         let mut largest_contributor = String::new();
 
-        for (symbol, _position) in positions {
+        for symbol in positions.keys() {
             let weight = weights.get(symbol).copied().unwrap_or(0.0);
             let volatility = self.volatilities.get(symbol).copied().unwrap_or(0.0);
             
@@ -145,7 +145,7 @@ impl RiskBudgeter {
             // MCR_i = (w_i / σ_p) * Σ(w_j * σ_i * σ_j * ρ_ij) for all j
             let mut marginal_risk = 0.0;
             
-            for (other_symbol, _other_position) in positions {
+            for other_symbol in positions.keys() {
                 let other_weight = weights.get(other_symbol).copied().unwrap_or(0.0);
                 let other_volatility = self.volatilities.get(other_symbol).copied().unwrap_or(0.0);
                 let correlation = if symbol == other_symbol {
@@ -317,9 +317,9 @@ impl RiskBudgeter {
         let mut max_correlation: f64 = 0.0;
 
         // Calculate all pairwise correlations
-        for i in 0..symbols.len() {
-            for j in (i + 1)..symbols.len() {
-                let correlation = self.get_correlation(&symbols[i], &symbols[j]).abs();
+        for (i, symbol_i) in symbols.iter().enumerate() {
+            for symbol_j in symbols.iter().skip(i + 1) {
+                let correlation = self.get_correlation(symbol_i, symbol_j).abs();
                 correlations.push(correlation);
                 max_correlation = max_correlation.max(correlation);
             }
@@ -336,19 +336,19 @@ impl RiskBudgeter {
         let mut correlation_clusters = Vec::new();
         let high_correlation_threshold = 0.75;
 
-        for i in 0..symbols.len() {
-            let mut cluster = vec![symbols[i].clone()];
+        for (i, symbol_i) in symbols.iter().enumerate() {
+            let mut cluster = vec![symbol_i.clone()];
             
-            for j in 0..symbols.len() {
+            for (j, symbol_j) in symbols.iter().enumerate() {
                 if i != j {
-                    let correlation = self.get_correlation(&symbols[i], &symbols[j]).abs();
+                    let correlation = self.get_correlation(symbol_i, symbol_j).abs();
                     if correlation > high_correlation_threshold {
                         // Check if this symbol is already in another cluster
                         let already_clustered = correlation_clusters.iter()
-                            .any(|existing_cluster: &Vec<String>| existing_cluster.contains(&symbols[j]));
+                            .any(|existing_cluster: &Vec<String>| existing_cluster.contains(symbol_j));
                         
-                        if !already_clustered && !cluster.contains(&symbols[j]) {
-                            cluster.push(symbols[j].clone());
+                        if !already_clustered && !cluster.contains(symbol_j) {
+                            cluster.push(symbol_j.clone());
                         }
                     }
                 }
@@ -444,13 +444,11 @@ impl RiskBudgeter {
         // Calculate portfolio variance using covariance matrix formula
         let mut portfolio_variance = 0.0;
         
-        for i in 0..symbols.len() {
-            let symbol_i = &symbols[i];
+        for (i, symbol_i) in symbols.iter().enumerate() {
             let weight_i = weights.get(symbol_i).unwrap_or(&0.0);
             let vol_i = self.volatilities.get(symbol_i).unwrap();
             
-            for j in 0..symbols.len() {
-                let symbol_j = &symbols[j];
+            for (j, symbol_j) in symbols.iter().enumerate() {
                 let weight_j = weights.get(symbol_j).unwrap_or(&0.0);
                 let vol_j = self.volatilities.get(symbol_j).unwrap();
                 

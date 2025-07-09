@@ -2,7 +2,8 @@
 
 A production-ready Rust-based algorithmic trading system implementing Robert Carver's systematic trading framework with volatility targeting, multi-timeframe signals, and comprehensive risk management.
 
-<a href="https://www.buymeacoffee.com/orielsanchez" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+[![Rust](https://img.shields.io/badge/rust-1.87+-orange.svg)](https://www.rust-lang.org/)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg)](https://www.buymeacoffee.com/orielsanchez)
 
 ## Overview
 
