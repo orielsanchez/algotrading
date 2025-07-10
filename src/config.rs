@@ -85,6 +85,26 @@ pub struct RiskConfig {
     pub correlation_lookback_days: usize,
     #[serde(default = "default_min_positions_for_erc")]
     pub min_positions_for_erc: usize,
+    // Transaction Cost Configuration
+    #[serde(default = "default_enable_transaction_cost_optimization")]
+    pub enable_transaction_cost_optimization: bool,
+    #[serde(default = "default_stock_commission")]
+    pub stock_commission: f64,
+    #[serde(default = "default_futures_commission")]
+    pub futures_commission: f64,
+    #[serde(default = "default_forex_commission")]
+    pub forex_commission: f64,
+    #[serde(default = "default_max_acceptable_cost_bps")]
+    pub max_acceptable_cost_bps: f64,
+    // Position Inertia Configuration
+    #[serde(default = "default_enable_position_inertia")]
+    pub enable_position_inertia: bool,
+    #[serde(default = "default_inertia_multiplier")]
+    pub inertia_multiplier: f64,
+    #[serde(default = "default_min_position_change_value")]
+    pub min_position_change_value: f64,
+    #[serde(default = "default_max_position_change_pct")]
+    pub max_position_change_pct: f64,
 }
 
 impl Default for RiskConfig {
@@ -105,6 +125,15 @@ impl Default for RiskConfig {
             max_correlation_exposure: default_max_correlation_exposure(),
             correlation_lookback_days: default_correlation_lookback_days(),
             min_positions_for_erc: default_min_positions_for_erc(),
+            enable_transaction_cost_optimization: default_enable_transaction_cost_optimization(),
+            stock_commission: default_stock_commission(),
+            futures_commission: default_futures_commission(),
+            forex_commission: default_forex_commission(),
+            max_acceptable_cost_bps: default_max_acceptable_cost_bps(),
+            enable_position_inertia: default_enable_position_inertia(),
+            inertia_multiplier: default_inertia_multiplier(),
+            min_position_change_value: default_min_position_change_value(),
+            max_position_change_pct: default_max_position_change_pct(),
         }
     }
 }
@@ -164,6 +193,44 @@ fn default_correlation_lookback_days() -> usize {
 
 fn default_min_positions_for_erc() -> usize {
     3 // Minimum 3 positions required for Equal Risk Contribution
+}
+
+// Transaction Cost Configuration Defaults
+fn default_enable_transaction_cost_optimization() -> bool {
+    true // Enable transaction cost optimization by default
+}
+
+fn default_stock_commission() -> f64 {
+    1.00 // $1.00 per stock trade
+}
+
+fn default_futures_commission() -> f64 {
+    2.50 // $2.50 per futures contract
+}
+
+fn default_forex_commission() -> f64 {
+    0.50 // $0.50 per forex trade
+}
+
+fn default_max_acceptable_cost_bps() -> f64 {
+    15.0 // 15 basis points maximum acceptable transaction cost
+}
+
+// Position Inertia Configuration Defaults
+fn default_enable_position_inertia() -> bool {
+    true // Enable position inertia by default (Carver framework)
+}
+
+fn default_inertia_multiplier() -> f64 {
+    2.0 // Carver's 2x transaction cost inertia threshold
+}
+
+fn default_min_position_change_value() -> f64 {
+    100.0 // $100 minimum position change to execute
+}
+
+fn default_max_position_change_pct() -> f64 {
+    0.50 // 50% maximum position change per rebalance
 }
 
 impl TradingConfig {
@@ -281,6 +348,15 @@ impl Default for TradingConfig {
                 max_correlation_exposure: default_max_correlation_exposure(),
                 correlation_lookback_days: default_correlation_lookback_days(),
                 min_positions_for_erc: default_min_positions_for_erc(),
+                enable_transaction_cost_optimization: default_enable_transaction_cost_optimization(),
+                stock_commission: default_stock_commission(),
+                futures_commission: default_futures_commission(),
+                forex_commission: default_forex_commission(),
+                max_acceptable_cost_bps: default_max_acceptable_cost_bps(),
+                enable_position_inertia: default_enable_position_inertia(),
+                inertia_multiplier: default_inertia_multiplier(),
+                min_position_change_value: default_min_position_change_value(),
+                max_position_change_pct: default_max_position_change_pct(),
             },
         }
     }

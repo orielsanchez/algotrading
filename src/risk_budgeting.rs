@@ -537,6 +537,17 @@ mod tests {
             max_correlation_exposure: 0.60,
             correlation_lookback_days: 63,
             min_positions_for_erc: 3,
+            // Transaction Cost Configuration
+            enable_transaction_cost_optimization: true,
+            stock_commission: 1.0,
+            futures_commission: 2.5,
+            forex_commission: 2.0,
+            max_acceptable_cost_bps: 15.0,
+            // Position Inertia Configuration
+            enable_position_inertia: true,
+            inertia_multiplier: 2.0,
+            min_position_change_value: 100.0,
+            max_position_change_pct: 0.20,
         }
     }
 

@@ -13,6 +13,9 @@ mod risk;
 mod risk_budgeting;
 mod security_types;
 mod stats;
+mod trading_integration;
+mod transaction_cost;
+mod position_inertia;
 mod volatility;
 
 use market_data::{MarketDataUpdate, TimeFrame};
@@ -63,6 +66,11 @@ async fn main() -> Result<()> {
         config.risk_config.clone(),
         config.risk_config.risk_budget_target_volatility,
     )));
+    
+    // Initialize transaction cost optimization and position inertia system
+    let trading_integration = Arc::new(trading_integration::TradingIntegrationLayer::new(
+        &config.risk_config,
+    ));
 
     // Initialize market data handler with TwsClient
     let handler_guard = tws_client.market_data_handler.lock().await;
@@ -318,8 +326,43 @@ async fn main() -> Result<()> {
                             signal.action, signal.symbol, signal.quantity, signal.price, signal.reason);
                     }
                     
+                    // Apply position inertia and transaction cost filtering
+                    let port = portfolio.lock().await;
+                    let handler_guard = tws_client.market_data_handler.lock().await;
+                    let latest_prices = handler_guard.get_latest_prices();
+                    drop(handler_guard);
+                    
+                    let (filtered_signals, filter_result) = trading_integration
+                        .filter_signals_with_cost_optimization(
+                            signals,
+                            &port,
+                            &latest_prices,
+                            config.risk_config.max_acceptable_cost_bps,
+                        )
+                        .await
+                        .unwrap_or_else(|e| {
+                            error!("Error filtering signals: {}", e);
+                            (Vec::new(), trading_integration::SignalFilterResult {
+                                original_signals: 0,
+                                inertia_filtered: 0,
+                                cost_filtered: 0,
+                                final_signals: 0,
+                                total_estimated_costs: 0.0,
+                            })
+                        });
+                    
+                    drop(port);
+                    signals = filtered_signals;
+                    
+                    info!("Signal filtering: {} original → {} final (inertia: {}, cost: {}, estimated costs: ${:.2})",
+                          filter_result.original_signals,
+                          filter_result.final_signals,
+                          filter_result.inertia_filtered,
+                          filter_result.cost_filtered,
+                          filter_result.total_estimated_costs);
+                    
                     // Apply risk budgeting to signals if enabled
-                    if config.risk_config.enable_risk_budgeting {
+                    if config.risk_config.enable_risk_budgeting && !signals.is_empty() {
                         let port = portfolio.lock().await;
                         let budgeter = risk_budgeter.lock().await;
                         
@@ -370,7 +413,7 @@ async fn main() -> Result<()> {
                     };
 
                     let mut order_mgr = order_manager.lock().await;
-                    let mut port = portfolio.lock().await;
+                    let port = portfolio.lock().await;
                     let risk_mgr = risk_manager.lock().await;
 
                     // Check if portfolio exposure is excessive before processing new signals
@@ -438,8 +481,26 @@ async fn main() -> Result<()> {
                         drop(order_mgr);
                         continue; // Skip normal signal processing
                     }
+                }
 
+                if !signals.is_empty() {
                     // Normal signal processing when exposure is within limits
+                    let mut port = portfolio.lock().await;
+                    let risk_mgr = risk_manager.lock().await;
+                    let mut order_mgr = order_manager.lock().await;
+                    
+                    // Get account summary for margin validation
+                    let account_summary = match tws_client.get_account_summary().await {
+                        Ok(summary) => summary,
+                        Err(e) => {
+                            error!("Failed to get account summary: {}", e);
+                            drop(port);
+                            drop(risk_mgr);
+                            drop(order_mgr);
+                            continue;
+                        }
+                    };
+                    
                     // Perform risk analysis before executing signals
                     risk_mgr.log_risk_analysis(&port);
 
