@@ -51,7 +51,7 @@ impl PositionInertiaCalculator {
         target_position: f64,
         transaction_cost: f64,
         signal_strength: f64,
-        price: f64,
+        _price: f64,
     ) -> Result<InertiaDecisionInfo> {
         // If inertia is disabled, always rebalance
         if !self.config.enable_position_inertia {
@@ -75,8 +75,9 @@ impl PositionInertiaCalculator {
         }
 
         // Check for position reversal (always execute)
-        if (current_position > 0.0 && target_position < 0.0) || 
-           (current_position < 0.0 && target_position > 0.0) {
+        if (current_position > 0.0 && target_position < 0.0)
+            || (current_position < 0.0 && target_position > 0.0)
+        {
             return Ok(InertiaDecisionInfo {
                 action: InertiaDecision::Rebalance,
                 recommended_position: target_position,
@@ -88,7 +89,7 @@ impl PositionInertiaCalculator {
         if signal_strength.abs() >= 18.0 {
             // Apply maximum position change limiting even for strong signals
             let max_change_value = current_position.abs() * self.config.max_position_change_pct;
-            
+
             let recommended_position = if target_position > current_position {
                 let change_amount = (target_position - current_position).min(max_change_value);
                 current_position + change_amount
@@ -97,10 +98,16 @@ impl PositionInertiaCalculator {
                 current_position - change_amount
             };
 
+            let reason = if (recommended_position - target_position).abs() > 0.01 {
+                "Strong signal overrides inertia, position change limited to maximum percentage".to_string()
+            } else {
+                "Strong signal overrides inertia".to_string()
+            };
+
             return Ok(InertiaDecisionInfo {
                 action: InertiaDecision::Rebalance,
                 recommended_position,
-                reason: "Strong signal overrides inertia".to_string(),
+                reason,
             });
         }
 
@@ -108,7 +115,7 @@ impl PositionInertiaCalculator {
         if position_change_value > inertia_threshold {
             // Apply maximum position change limiting
             let max_change_value = current_position.abs() * self.config.max_position_change_pct;
-            
+
             let recommended_position = if target_position > current_position {
                 let change_amount = (target_position - current_position).min(max_change_value);
                 current_position + change_amount
@@ -143,13 +150,13 @@ impl PositionInertiaCalculator {
         positions: Vec<(&str, f64, f64, f64)>, // (symbol, current, target, tx_cost)
     ) -> Result<Vec<InertiaDecisionInfo>> {
         let mut decisions = Vec::new();
-        
-        for (symbol, current_position, target_position, transaction_cost) in positions {
+
+        for (_symbol, current_position, target_position, transaction_cost) in positions {
             let decision = self.calculate_position_decision(
                 current_position,
                 target_position,
                 transaction_cost,
-                10.0, // Default signal strength
+                10.0,  // Default signal strength
                 100.0, // Default price
             )?;
             decisions.push(decision);
@@ -163,8 +170,8 @@ impl PositionInertiaCalculator {
         current_position: f64,
         target_position: f64,
         transaction_cost: f64,
-        signal_strength: f64,
-        price: f64,
+        _signal_strength: f64,
+        _price: f64,
     ) -> Result<CostBenefitAnalysis> {
         let position_change_value = (target_position - current_position).abs();
         let inertia_threshold = self.calculate_inertia_threshold(transaction_cost)?;
