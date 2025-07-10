@@ -110,7 +110,12 @@ impl RiskManager {
     }
 
     /// Calculate stop loss price based on position and risk parameters
-    pub fn calculate_stop_loss(&self, _position: &Position, entry_price: f64, is_long: bool) -> f64 {
+    pub fn calculate_stop_loss(
+        &self,
+        _position: &Position,
+        entry_price: f64,
+        is_long: bool,
+    ) -> f64 {
         let stop_loss_percentage = self.config.stop_loss_percentage;
 
         if is_long {

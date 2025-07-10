@@ -1,5 +1,6 @@
 mod bollinger;
 mod breakout;
+mod carry;
 mod config;
 mod connection;
 mod futures_utils;
@@ -9,13 +10,16 @@ mod momentum;
 mod order_types;
 mod orders;
 mod portfolio;
+mod position_inertia;
+mod position_manager;
 mod risk;
 mod risk_budgeting;
+mod risk_budgeting_inertia;
 mod security_types;
+mod signals;
 mod stats;
 mod trading_integration;
 mod transaction_cost;
-mod position_inertia;
 mod volatility;
 
 use market_data::{MarketDataUpdate, TimeFrame};
@@ -32,7 +36,9 @@ use tokio::time::{Duration, interval, sleep};
 async fn main() -> Result<()> {
     // Initialize logger with default info level if RUST_LOG not set
     if std::env::var("RUST_LOG").is_err() {
-        unsafe { std::env::set_var("RUST_LOG", "info"); }
+        unsafe {
+            std::env::set_var("RUST_LOG", "info");
+        }
     }
     env_logger::init();
     info!("Starting Momentum Trading Bot");
@@ -60,13 +66,13 @@ async fn main() -> Result<()> {
     let risk_manager = Arc::new(Mutex::new(risk::RiskManager::new(
         config.risk_config.clone(),
     )));
-    
+
     // Initialize risk budgeting system
     let risk_budgeter = Arc::new(Mutex::new(risk_budgeting::RiskBudgeter::new(
         config.risk_config.clone(),
         config.risk_config.risk_budget_target_volatility,
     )));
-    
+
     // Initialize transaction cost optimization and position inertia system
     let trading_integration = Arc::new(trading_integration::TradingIntegrationLayer::new(
         &config.risk_config,
@@ -80,21 +86,25 @@ async fn main() -> Result<()> {
     for security_cfg in &config.strategy_config.securities {
         let security_info = match security_cfg.security_type {
             security_types::SecurityType::Future => {
-                let contract = security_cfg.futures_specs.as_ref().map(|s| security_types::FuturesContract {
-                    underlying: s.underlying.clone(),
-                    expiry: s.expiry.clone(),
-                    multiplier: s.multiplier,
-                    tick_size: s.tick_size,
-                    contract_month: s.contract_month.clone(),
-                }).unwrap_or_default();
-                
+                let contract = security_cfg
+                    .futures_specs
+                    .as_ref()
+                    .map(|s| security_types::FuturesContract {
+                        underlying: s.underlying.clone(),
+                        expiry: s.expiry.clone(),
+                        multiplier: s.multiplier,
+                        tick_size: s.tick_size,
+                        contract_month: s.contract_month.clone(),
+                    })
+                    .unwrap_or_default();
+
                 security_types::SecurityInfo::new_future(
                     security_cfg.symbol.clone(),
                     security_cfg.exchange.clone(),
                     security_cfg.currency.clone(),
                     contract,
                 )
-            },
+            }
             security_types::SecurityType::Forex => security_types::SecurityInfo::new_forex(
                 security_cfg.symbol.clone(),
                 security_cfg.exchange.clone(),
@@ -149,21 +159,25 @@ async fn main() -> Result<()> {
 
         let security_info = match security_cfg.security_type {
             security_types::SecurityType::Future => {
-                let contract = security_cfg.futures_specs.as_ref().map(|s| security_types::FuturesContract {
-                    underlying: s.underlying.clone(),
-                    expiry: s.expiry.clone(),
-                    multiplier: s.multiplier,
-                    tick_size: s.tick_size,
-                    contract_month: s.contract_month.clone(),
-                }).unwrap_or_default();
-                
+                let contract = security_cfg
+                    .futures_specs
+                    .as_ref()
+                    .map(|s| security_types::FuturesContract {
+                        underlying: s.underlying.clone(),
+                        expiry: s.expiry.clone(),
+                        multiplier: s.multiplier,
+                        tick_size: s.tick_size,
+                        contract_month: s.contract_month.clone(),
+                    })
+                    .unwrap_or_default();
+
                 security_types::SecurityInfo::new_future(
                     security_cfg.symbol.clone(),
                     security_cfg.exchange.clone(),
                     security_cfg.currency.clone(),
                     contract,
                 )
-            },
+            }
             security_types::SecurityType::Forex => security_types::SecurityInfo::new_forex(
                 security_cfg.symbol.clone(),
                 security_cfg.exchange.clone(),
@@ -199,9 +213,12 @@ async fn main() -> Result<()> {
             let net_liq = summary.get("net_liquidation").copied().unwrap_or(0.0);
             let cash = summary.get("cash").copied().unwrap_or(0.0);
             let unrealized_pnl = summary.get("unrealized_pnl").copied().unwrap_or(0.0);
-            
-            info!("Account: Net=${:.2} Cash=${:.2} P&L=${:.2}", net_liq, cash, unrealized_pnl);
-            
+
+            info!(
+                "Account: Net=${:.2} Cash=${:.2} P&L=${:.2}",
+                net_liq, cash, unrealized_pnl
+            );
+
             // Update portfolio with actual cash balance
             let mut port = portfolio.lock().await;
             port.update_cash_balance(cash);
@@ -217,8 +234,11 @@ async fn main() -> Result<()> {
             let position_count = positions.len();
             if !positions.is_empty() {
                 let total_value: f64 = positions.iter().map(|p| p.position * p.avg_cost).sum();
-                info!("Positions: {} open, total value ${:.2}", position_count, total_value);
-                
+                info!(
+                    "Positions: {} open, total value ${:.2}",
+                    position_count, total_value
+                );
+
                 let mut strategy = momentum_strategy.lock().await;
                 let mut port = portfolio.lock().await;
 
@@ -325,13 +345,13 @@ async fn main() -> Result<()> {
                         debug!("Signal: {} {} {:.0} shares @ ${:.2} - {}",
                             signal.action, signal.symbol, signal.quantity, signal.price, signal.reason);
                     }
-                    
+
                     // Apply position inertia and transaction cost filtering
                     let port = portfolio.lock().await;
                     let handler_guard = tws_client.market_data_handler.lock().await;
                     let latest_prices = handler_guard.get_latest_prices();
                     drop(handler_guard);
-                    
+
                     let (filtered_signals, filter_result) = trading_integration
                         .filter_signals_with_cost_optimization(
                             signals,
@@ -350,39 +370,39 @@ async fn main() -> Result<()> {
                                 total_estimated_costs: 0.0,
                             })
                         });
-                    
+
                     drop(port);
                     signals = filtered_signals;
-                    
+
                     info!("Signal filtering: {} original → {} final (inertia: {}, cost: {}, estimated costs: ${:.2})",
                           filter_result.original_signals,
                           filter_result.final_signals,
                           filter_result.inertia_filtered,
                           filter_result.cost_filtered,
                           filter_result.total_estimated_costs);
-                    
+
                     // Apply risk budgeting to signals if enabled
                     if config.risk_config.enable_risk_budgeting && !signals.is_empty() {
                         let port = portfolio.lock().await;
                         let budgeter = risk_budgeter.lock().await;
-                        
+
                         // Calculate risk budget allocations
                         match budgeter.calculate_risk_contributions(&port) {
                             Ok(risk_contributions) => {
                                 info!("Risk budgeting: {} positions analyzed", risk_contributions.risk_contributions.len());
-                                
+
                                 // Get ERC recommendations
                                 match budgeter.calculate_erc_allocations(&port) {
                                     Ok(erc_allocations) => {
                                         info!("ERC allocation: {} target weights", erc_allocations.len());
-                                        
+
                                         // Adjust signal quantities based on risk budgeting
                                         for signal in &mut signals {
                                             if let Some(erc_allocation) = erc_allocations.iter().find(|a| a.symbol == signal.symbol) {
                                                 let portfolio_value = port.get_stats().total_value;
                                                 let target_value = erc_allocation.target_weight * portfolio_value;
                                                 let adjusted_quantity = target_value / signal.price;
-                                                
+
                                                 if adjusted_quantity.abs() < signal.quantity.abs() {
                                                     info!("Risk budgeting: Reducing {} position size from {:.0} to {:.0}",
                                                         signal.symbol, signal.quantity, adjusted_quantity);
@@ -488,7 +508,7 @@ async fn main() -> Result<()> {
                     let mut port = portfolio.lock().await;
                     let risk_mgr = risk_manager.lock().await;
                     let mut order_mgr = order_manager.lock().await;
-                    
+
                     // Get account summary for margin validation
                     let account_summary = match tws_client.get_account_summary().await {
                         Ok(summary) => summary,
@@ -500,7 +520,7 @@ async fn main() -> Result<()> {
                             continue;
                         }
                     };
-                    
+
                     // Perform risk analysis before executing signals
                     risk_mgr.log_risk_analysis(&port);
 
@@ -521,14 +541,14 @@ async fn main() -> Result<()> {
                         // Additional risk budgeting validation if enabled
                         if config.risk_config.enable_risk_budgeting {
                             let budgeter = risk_budgeter.lock().await;
-                            
+
                             // Check correlation risk
                             let symbols: Vec<String> = port.positions().keys().cloned().collect();
                             match budgeter.calculate_correlation_risk(&symbols) {
                                 Ok(correlation_risk) => {
                                     if correlation_risk.diversification_score < (1.0 - config.risk_config.max_correlation_exposure) {
                                         warn!("Risk budgeting: Diversification score too low for {}: {:.2}% < {:.2}%",
-                                            signal.symbol, 
+                                            signal.symbol,
                                             correlation_risk.diversification_score * 100.0,
                                             (1.0 - config.risk_config.max_correlation_exposure) * 100.0);
                                         drop(budgeter);
@@ -556,6 +576,10 @@ async fn main() -> Result<()> {
                             config.risk_config.max_margin_utilization,
                         ) {
                             Ok(order) => {
+                                debug!(
+                                    "About to place TWS order: signal.quantity={:.0}, order.quantity={:.0}",
+                                    signal.quantity, order.quantity
+                                );
                                 match tws_client.place_order(&signal).await {
                                     Ok(tws_order_id) => {
                                         let _ = order_mgr.update_order_status(order.id, orders::OrderStatus::Submitted);
@@ -593,7 +617,7 @@ async fn main() -> Result<()> {
                     }
 
                     let stats = port.get_stats();
-                    info!("Portfolio: ${:.2} total, {} positions, P&L ${:.2}", 
+                    info!("Portfolio: ${:.2} total, {} positions, P&L ${:.2}",
                         stats.total_value, stats.positions_count, stats.total_unrealized_pnl);
 
                     // Show current positions from portfolio (should match TWS now)
@@ -668,7 +692,7 @@ async fn main() -> Result<()> {
                                 .unwrap_or(pos.avg_cost);
                             port.sync_position_from_tws(pos, current_price);
                         }
-                        
+
                         // Show current positions summary
                         if !positions.is_empty() {
                             let total_value: f64 = positions.iter().map(|p| p.position * p.avg_cost).sum();

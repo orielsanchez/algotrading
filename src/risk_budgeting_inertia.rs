@@ -46,8 +46,8 @@ impl RiskBudgetingInertiaCalculator {
     pub fn calculate_erc_with_inertia(
         &self,
         current_positions: Vec<(&str, f64, f64)>, // (symbol, value, weight)
-        erc_targets: Vec<(&str, f64)>, // (symbol, target_weight)
-        transaction_costs: Vec<(&str, f64)>, // (symbol, cost)
+        erc_targets: Vec<(&str, f64)>,            // (symbol, target_weight)
+        transaction_costs: Vec<(&str, f64)>,      // (symbol, cost)
         total_portfolio_value: f64,
     ) -> Result<Vec<ERCInertiaDecisionInfo>> {
         let mut decisions = Vec::new();
@@ -62,19 +62,18 @@ impl RiskBudgetingInertiaCalculator {
 
             let position_drift_pct = ((target_weight - current_weight) / current_weight).abs();
             let is_large_drift = position_drift_pct > self.rebalance_threshold + f64::EPSILON;
-            
-            
+
             let action = if !self.enable_cost_aware_erc {
                 ERCInertiaDecision::Rebalance
             } else if is_large_drift {
-                ERCInertiaDecision::Rebalance  // Large drift overrides cost considerations
+                ERCInertiaDecision::Rebalance // Large drift overrides cost considerations
             } else {
                 // For small drifts, always hold to reduce transaction costs
                 ERCInertiaDecision::Hold
             };
 
-            let blocked_by_inertia = self.enable_cost_aware_erc && 
-                                     action == ERCInertiaDecision::Hold;
+            let blocked_by_inertia =
+                self.enable_cost_aware_erc && action == ERCInertiaDecision::Hold;
 
             let reason = if !self.enable_cost_aware_erc {
                 "Cost-aware ERC disabled".to_string()
@@ -127,7 +126,8 @@ impl RiskBudgetingInertiaCalculator {
 
         // Apply correlation risk boost
         for (i, decision) in decisions.iter_mut().enumerate() {
-            let avg_correlation = correlation_matrix[i].iter().sum::<f64>() / correlation_matrix[i].len() as f64;
+            let avg_correlation =
+                correlation_matrix[i].iter().sum::<f64>() / correlation_matrix[i].len() as f64;
             decision.correlation_risk_boost = (avg_correlation - 0.5).max(0.0) * 0.1;
         }
 

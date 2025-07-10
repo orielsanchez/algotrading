@@ -24,8 +24,7 @@ pub struct ForexPair {
     pub pair_symbol: String, // e.g., "EUR.USD"
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FuturesContract {
     pub underlying: String,
     pub expiry: String,
@@ -78,7 +77,12 @@ impl SecurityInfo {
         }
     }
 
-    pub fn new_future(symbol: String, exchange: String, currency: String, contract: FuturesContract) -> Self {
+    pub fn new_future(
+        symbol: String,
+        exchange: String,
+        currency: String,
+        contract: FuturesContract,
+    ) -> Self {
         Self {
             symbol,
             security_type: SecurityType::Future,
@@ -124,12 +128,11 @@ impl SecurityInfo {
     }
 
     pub fn get_forex_description(&self) -> Option<String> {
-        self.forex_pair.as_ref().map(|pair| format!(
+        self.forex_pair.as_ref().map(|pair| {
+            format!(
                 "Trading {} {} against {} {}",
-                self.symbol,
-                pair.base_currency,
-                self.currency,
-                pair.quote_currency
-            ))
+                self.symbol, pair.base_currency, self.currency, pair.quote_currency
+            )
+        })
     }
 }

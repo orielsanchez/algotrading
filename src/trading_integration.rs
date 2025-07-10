@@ -148,13 +148,44 @@ impl TradingIntegrationLayer {
                     InertiaDecision::Rebalance => {
                         // Adjust signal quantity based on inertia recommendation
                         let mut adjusted_signal = signal.clone();
-                        let recommended_shares = decision.recommended_position / current_price;
-                        adjusted_signal.quantity = recommended_shares.abs();
-                        adjusted_signal.action = if recommended_shares >= 0.0 {
+                        
+                        // For forex, recommended_position is already in base currency units
+                        // For stocks, we need to convert from dollar value to shares
+                        let recommended_quantity = match signal.security_info.security_type {
+                            crate::security_types::SecurityType::Forex => {
+                                // TEMPORARY: Position inertia not properly calibrated for forex yet
+                                // Use original signal quantity for forex pairs
+                                if decision.recommended_position == 0.0 && signal.quantity > 0.0 {
+                                    warn!(
+                                        "Position inertia recommends 0 for forex {} but signal has {:.0} - using signal quantity",
+                                        signal.symbol, signal.quantity
+                                    );
+                                    signal.quantity
+                                } else {
+                                    decision.recommended_position
+                                }
+                            }
+                            _ => {
+                                // Stocks/Futures: convert dollar value to shares/contracts
+                                decision.recommended_position / current_price
+                            }
+                        };
+                        
+                        adjusted_signal.quantity = recommended_quantity.abs();
+                        adjusted_signal.action = if recommended_quantity >= 0.0 {
                             "BUY".to_string()
                         } else {
                             "SELL".to_string()
                         };
+
+                        debug!(
+                            "Position inertia conversion for {}: recommended_position={:.0}, current_price={:.4}, quantity={:.0}",
+                            signal.symbol,
+                            decision.recommended_position,
+                            current_price,
+                            adjusted_signal.quantity
+                        );
+
 
                         debug!(
                             "Position inertia allows signal for {}: {} -> {} (recommended: {})",

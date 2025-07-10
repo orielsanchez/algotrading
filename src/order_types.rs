@@ -1,6 +1,6 @@
 use anyhow::Result;
-use ibapi::prelude::*;
 use ibapi::orders::Order;
+use ibapi::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Enhanced order types for systematic trading
@@ -18,9 +18,9 @@ pub enum OrderType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TimeInForce {
     Day,
-    GTC,  // Good Till Canceled
-    IOC,  // Immediate or Cancel
-    FOK,  // Fill or Kill
+    GTC, // Good Till Canceled
+    IOC, // Immediate or Cancel
+    FOK, // Fill or Kill
 }
 
 /// Enhanced order parameters
@@ -31,9 +31,9 @@ pub struct OrderParams {
     pub quantity: f64,
     pub order_type: OrderType,
     pub time_in_force: TimeInForce,
-    pub outside_rth: bool,  // Outside Regular Trading Hours
-    pub hidden: bool,       // Hidden order
-    pub all_or_none: bool,  // All or None
+    pub outside_rth: bool, // Outside Regular Trading Hours
+    pub hidden: bool,      // Hidden order
+    pub all_or_none: bool, // All or None
 }
 
 /// Order action enum
@@ -122,13 +122,13 @@ impl EnhancedOrderBuilder {
             order_type: "TRAIL".to_string(),
             ..Default::default()
         };
-        
+
         if is_percentage {
             order.trail_stop_price = Some(trail_amount);
         } else {
             order.aux_price = Some(trail_amount);
         }
-        
+
         order.tif = "DAY".to_string();
         order
     }
@@ -195,15 +195,22 @@ impl EnhancedOrderBuilder {
         let mut order = match params.order_type {
             OrderType::Market => Self::market_order(params.action, params.quantity),
             OrderType::Limit { price } => Self::limit_order(params.action, params.quantity, price),
-            OrderType::Stop { stop_price } => Self::stop_order(params.action, params.quantity, stop_price),
-            OrderType::StopLimit { stop_price, limit_price } => {
-                Self::stop_limit_order(params.action, params.quantity, stop_price, limit_price)
+            OrderType::Stop { stop_price } => {
+                Self::stop_order(params.action, params.quantity, stop_price)
             }
+            OrderType::StopLimit {
+                stop_price,
+                limit_price,
+            } => Self::stop_limit_order(params.action, params.quantity, stop_price, limit_price),
             OrderType::TrailingStop { trail_amount } => {
                 Self::trailing_stop_order(params.action, params.quantity, trail_amount, false)
             }
-            OrderType::TrailingStopLimit { trail_amount, limit_price } => {
-                let mut order = Self::trailing_stop_order(params.action, params.quantity, trail_amount, false);
+            OrderType::TrailingStopLimit {
+                trail_amount,
+                limit_price,
+            } => {
+                let mut order =
+                    Self::trailing_stop_order(params.action, params.quantity, trail_amount, false);
                 order.limit_price = Some(limit_price);
                 order.order_type = "TRAIL LIMIT".to_string();
                 order
@@ -216,7 +223,8 @@ impl EnhancedOrderBuilder {
             TimeInForce::GTC => "GTC",
             TimeInForce::IOC => "IOC",
             TimeInForce::FOK => "FOK",
-        }.to_string();
+        }
+        .to_string();
 
         // Apply additional parameters
         order.outside_rth = params.outside_rth;
@@ -273,7 +281,9 @@ impl RiskOrders {
             symbol: symbol.to_string(),
             action,
             quantity: position_size.abs(),
-            order_type: OrderType::Limit { price: target_price },
+            order_type: OrderType::Limit {
+                price: target_price,
+            },
             time_in_force: TimeInForce::GTC,
             outside_rth: false,
             hidden: false,
@@ -342,15 +352,15 @@ mod tests {
         let orders = EnhancedOrderBuilder::bracket_order(
             OrderAction::Buy,
             100.0,
-            150.0,  // entry
-            160.0,  // profit target
-            140.0,  // stop loss
+            150.0, // entry
+            160.0, // profit target
+            140.0, // stop loss
         );
 
         assert_eq!(orders.len(), 3);
-        assert_eq!(orders[0].action, Action::Buy);      // Parent
-        assert_eq!(orders[1].action, Action::Sell);     // Profit target
-        assert_eq!(orders[2].action, Action::Sell);     // Stop loss
+        assert_eq!(orders[0].action, Action::Buy); // Parent
+        assert_eq!(orders[1].action, Action::Sell); // Profit target
+        assert_eq!(orders[2].action, Action::Sell); // Stop loss
     }
 
     #[test]
@@ -358,7 +368,7 @@ mod tests {
         let stop_loss = RiskOrders::stop_loss_for_position("AAPL", 100.0, 140.0, true);
         assert_eq!(stop_loss.action, OrderAction::Sell);
         assert_eq!(stop_loss.quantity, 100.0);
-        
+
         let take_profit = RiskOrders::take_profit_for_position("AAPL", 100.0, 160.0, true);
         assert_eq!(take_profit.action, OrderAction::Sell);
         assert_eq!(take_profit.quantity, 100.0);

@@ -241,13 +241,10 @@ pub fn check_margin_health(
         .get("net_liquidation")
         .copied()
         .unwrap_or(0.0);
-    let excess_liquidity = account_summary
-        .get("excess_liquidity")
-        .copied()
-        .unwrap_or({
-            // Calculate if not provided
-            net_liquidation - maintenance_margin
-        });
+    let excess_liquidity = account_summary.get("excess_liquidity").copied().unwrap_or({
+        // Calculate if not provided
+        net_liquidation - maintenance_margin
+    });
 
     if net_liquidation == 0.0 {
         return MarginStatus::Warning(

@@ -1,6 +1,6 @@
 use crate::config::{SecurityConfig, TwsConfig};
 use crate::market_data::{MarketDataHandler, MarketDataUpdate};
-use crate::order_types::{EnhancedOrderBuilder, OrderParams, OrderAction};
+use crate::order_types::{EnhancedOrderBuilder, OrderAction, OrderParams};
 use crate::orders::OrderSignal;
 use crate::security_types::SecurityType;
 use anyhow::Result;
@@ -82,7 +82,7 @@ impl TwsClient {
             SecurityType::Forex => {
                 // Parse forex pair (e.g., EUR.USD -> base=EUR, quote=USD)
                 let mut contract = Contract::default();
-                
+
                 if security_config.symbol.contains('.') {
                     // New format: EUR.USD, GBP.USD, etc.
                     let parts: Vec<&str> = security_config.symbol.split('.').collect();
@@ -99,10 +99,10 @@ impl TwsClient {
                     contract.symbol = security_config.symbol.to_string();
                     contract.currency = security_config.currency.to_string();
                 }
-                
+
                 contract.security_type = ibapi::contracts::SecurityType::ForexPair;
                 contract.exchange = security_config.exchange.to_string();
-                
+
                 log::debug!(
                     "Created forex contract: {} base={} quote={} exchange={}",
                     security_config.symbol,
@@ -110,7 +110,7 @@ impl TwsClient {
                     contract.currency,
                     contract.exchange
                 );
-                
+
                 contract
             }
         }
@@ -199,40 +199,60 @@ impl TwsClient {
                 if let Some(limit_price) = signal.limit_price {
                     EnhancedOrderBuilder::limit_order(action, signal.quantity, limit_price)
                 } else {
-                    warn!("Limit order requested but no limit price provided for {}, using market order", signal.symbol);
+                    warn!(
+                        "Limit order requested but no limit price provided for {}, using market order",
+                        signal.symbol
+                    );
                     EnhancedOrderBuilder::market_order(action, signal.quantity)
                 }
             }
             _ => {
-                warn!("Unsupported order type '{}' for {}, using market order", signal.order_type, signal.symbol);
+                warn!(
+                    "Unsupported order type '{}' for {}, using market order",
+                    signal.order_type, signal.symbol
+                );
                 EnhancedOrderBuilder::market_order(action, signal.quantity)
             }
         };
 
         let order_id = self.client.next_order_id();
 
+        debug!(
+            "Submitting TWS order: signal.quantity={:.0}, order.total_quantity={:.0}",
+            signal.quantity,
+            order.total_quantity
+        );
+
         // Submit order (fire-and-forget)
         self.client.submit_order(order_id, &contract, &order)?;
 
-        let action_str = if signal.action == "BUY" { "Buy" } else { "Sell" };
+        let action_str = if signal.action == "BUY" {
+            "Buy"
+        } else {
+            "Sell"
+        };
 
         info!(
             "Placed {} order #{} for {} {} of {} ({})",
-            action_str,
-            order_id,
-            signal.quantity,
-            unit_type,
-            signal.symbol,
-            signal.reason
+            action_str, order_id, signal.quantity, unit_type, signal.symbol, signal.reason
         );
 
         // Log order placement with order details
         if let Some(limit_price) = signal.limit_price {
-            info!("Order #{} submitted: {} {} {} @ ${:.2} ({})", 
-                  order_id, signal.action, signal.quantity, signal.symbol, limit_price, signal.order_type);
+            info!(
+                "Order #{} submitted: {} {} {} @ ${:.2} ({})",
+                order_id,
+                signal.action,
+                signal.quantity,
+                signal.symbol,
+                limit_price,
+                signal.order_type
+            );
         } else {
-            info!("Order #{} submitted: {} {} {} ({})", 
-                  order_id, signal.action, signal.quantity, signal.symbol, signal.order_type);
+            info!(
+                "Order #{} submitted: {} {} {} ({})",
+                order_id, signal.action, signal.quantity, signal.symbol, signal.order_type
+            );
         }
 
         Ok(order_id)
@@ -279,19 +299,19 @@ impl TwsClient {
 
         info!(
             "Placed enhanced {:?} order #{} for {} {} of {} (type: {:?})",
-            params.action,
-            order_id,
-            params.quantity,
-            unit_type,
-            params.symbol,
-            params.order_type
+            params.action, order_id, params.quantity, unit_type, params.symbol, params.order_type
         );
 
         Ok(order_id)
     }
 
     /// Place a limit order
-    pub async fn place_limit_order(&self, symbol: &str, quantity: f64, limit_price: f64) -> Result<i32> {
+    pub async fn place_limit_order(
+        &self,
+        symbol: &str,
+        quantity: f64,
+        limit_price: f64,
+    ) -> Result<i32> {
         use crate::order_types::{OrderAction, OrderType, TimeInForce};
 
         let action = if quantity > 0.0 {
@@ -315,7 +335,12 @@ impl TwsClient {
     }
 
     /// Place a stop loss order
-    pub async fn place_stop_loss_order(&self, symbol: &str, quantity: f64, stop_price: f64) -> Result<i32> {
+    pub async fn place_stop_loss_order(
+        &self,
+        symbol: &str,
+        quantity: f64,
+        stop_price: f64,
+    ) -> Result<i32> {
         use crate::order_types::{OrderAction, OrderType, TimeInForce};
 
         let action = if quantity > 0.0 {
@@ -339,7 +364,12 @@ impl TwsClient {
     }
 
     /// Place a take profit order (limit order)
-    pub async fn place_take_profit_order(&self, symbol: &str, quantity: f64, target_price: f64) -> Result<i32> {
+    pub async fn place_take_profit_order(
+        &self,
+        symbol: &str,
+        quantity: f64,
+        target_price: f64,
+    ) -> Result<i32> {
         use crate::order_types::{OrderAction, OrderType, TimeInForce};
 
         let action = if quantity > 0.0 {
@@ -352,7 +382,9 @@ impl TwsClient {
             symbol: symbol.to_string(),
             action,
             quantity: quantity.abs(),
-            order_type: OrderType::Limit { price: target_price },
+            order_type: OrderType::Limit {
+                price: target_price,
+            },
             time_in_force: TimeInForce::GTC,
             outside_rth: false,
             hidden: false,
@@ -403,8 +435,9 @@ impl TwsClient {
         let parent_order_id = self.client.next_order_id();
         let mut parent_order = orders[0].clone();
         parent_order.transmit = false; // Don't transmit until children are set
-        
-        self.client.submit_order(parent_order_id, &contract, &parent_order)?;
+
+        self.client
+            .submit_order(parent_order_id, &contract, &parent_order)?;
         order_ids.push(parent_order_id);
 
         // Submit child orders
@@ -412,8 +445,9 @@ impl TwsClient {
             let child_order_id = self.client.next_order_id();
             child_order.parent_id = parent_order_id;
             child_order.transmit = order_ids.len() == 2; // Transmit on last child
-            
-            self.client.submit_order(child_order_id, &contract, &child_order)?;
+
+            self.client
+                .submit_order(child_order_id, &contract, &child_order)?;
             order_ids.push(child_order_id);
         }
 
@@ -796,9 +830,7 @@ mod tests {
         client
             .subscribe_realtime_data("MSFT", 2, tx.clone())
             .await?;
-        client
-            .subscribe_realtime_data("GOOGL", 3, tx)
-            .await?;
+        client.subscribe_realtime_data("GOOGL", 3, tx).await?;
 
         // Should receive updates for all symbols
         let mut received_symbols = std::collections::HashSet::new();

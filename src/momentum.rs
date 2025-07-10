@@ -10,7 +10,7 @@ use crate::security_types::{SecurityInfo, SecurityType};
 use crate::signals::{
     CoordinatorConfig, SignalCoordinator, SignalCore, SignalQuality, SignalType, SignalWeights,
 };
-use log::{debug, warn};
+use log::{debug, info, warn};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -408,6 +408,13 @@ impl MomentumStrategy {
 
                         let order_type = self.get_order_type();
                         let limit_price = self.calculate_limit_price(action, data.last_price);
+
+                        debug!(
+                            "Creating OrderSignal for {}: quantity={:.0} (abs={:.0})",
+                            score.symbol,
+                            quantity,
+                            quantity.abs()
+                        );
 
                         signals.push(OrderSignal {
                             symbol: score.symbol.clone(),

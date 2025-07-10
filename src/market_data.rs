@@ -2,7 +2,7 @@ use crate::security_types::SecurityInfo;
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum TimeFrame {
     Minutes15,
     Hours1,
@@ -11,10 +11,10 @@ pub enum TimeFrame {
     Days7,
     Days14,
     // Carver's multi-timeframe momentum periods
-    Days2_8,    // 2-8 day momentum
-    Days4_16,   // 4-16 day momentum  
-    Days8_32,   // 8-32 day momentum
-    Days16_64,  // 16-64 day momentum
+    Days2_8,   // 2-8 day momentum
+    Days4_16,  // 4-16 day momentum
+    Days8_32,  // 8-32 day momentum
+    Days16_64, // 16-64 day momentum
 }
 
 impl TimeFrame {
@@ -67,7 +67,7 @@ impl TimeFrame {
             TimeFrame::Days16_64,
         ]
     }
-    
+
     /// Get Carver's multi-timeframe momentum periods
     pub fn carver_momentum_timeframes() -> Vec<TimeFrame> {
         vec![
@@ -77,12 +77,12 @@ impl TimeFrame {
             TimeFrame::Days16_64,
         ]
     }
-    
+
     /// Get the range of lookback periods for momentum calculation
     pub fn momentum_range(&self) -> (i32, i32) {
         match self {
             TimeFrame::Minutes15 => (15, 15),
-            TimeFrame::Hours1 => (60, 60), 
+            TimeFrame::Hours1 => (60, 60),
             TimeFrame::Hours4 => (240, 240),
             TimeFrame::Days1 => (1, 1),
             TimeFrame::Days7 => (7, 7),
@@ -199,8 +199,8 @@ impl MarketDataHandler {
     ) {
         if let Some(history) = self.price_history.get_mut(symbol) {
             // Convert time::OffsetDateTime to chrono::DateTime<Utc>
-            let datetime = DateTime::from_timestamp(timestamp.unix_timestamp(), 0)
-                .unwrap_or_else(Utc::now);
+            let datetime =
+                DateTime::from_timestamp(timestamp.unix_timestamp(), 0).unwrap_or_else(Utc::now);
 
             history.prices.push((datetime, price));
 
@@ -413,7 +413,7 @@ impl MarketDataHandler {
             timeframe: TimeFrame::Days1,
         })
     }
-    
+
     /// Calculate range-based momentum following Carver's approach
     /// This calculates momentum over multiple periods within a range and combines them
     fn calculate_range_based_momentum(
@@ -429,17 +429,17 @@ impl MarketDataHandler {
             }
             return 0.0;
         }
-        
+
         let mut momentum_sum = 0.0;
         let mut count = 0;
-        
+
         // Calculate momentum for each period length in the range
         for period_days in min_days..=max_days {
             let period_idx = period_days as usize;
             if period_idx < prices.len() {
                 let start_price = prices[prices.len() - period_idx - 1].1;
                 let end_price = prices[prices.len() - 1].1;
-                
+
                 if start_price > 0.0 {
                     let momentum = (end_price - start_price) / start_price;
                     momentum_sum += momentum;
@@ -447,7 +447,7 @@ impl MarketDataHandler {
                 }
             }
         }
-        
+
         if count > 0 {
             momentum_sum / count as f64
         } else {
@@ -492,7 +492,10 @@ impl MarketDataHandler {
         // Calculate simple momentum based on timeframe type
         let simple_momentum = match timeframe {
             // For Carver's range-based timeframes, calculate momentum over multiple periods
-            TimeFrame::Days2_8 | TimeFrame::Days4_16 | TimeFrame::Days8_32 | TimeFrame::Days16_64 => {
+            TimeFrame::Days2_8
+            | TimeFrame::Days4_16
+            | TimeFrame::Days8_32
+            | TimeFrame::Days16_64 => {
                 let (min_days, max_days) = timeframe.momentum_range();
                 self.calculate_range_based_momentum(&timeframe_prices, min_days, max_days)
             }
@@ -539,10 +542,10 @@ impl MarketDataHandler {
             TimeFrame::Days7 => (52.0_f64).sqrt(),                   // Weeks per year
             TimeFrame::Days14 => (26.0_f64).sqrt(),                  // Bi-weeks per year
             // For Carver's momentum timeframes, use appropriate scaling
-            TimeFrame::Days2_8 => (252.0 / 5.0_f64).sqrt(),         // ~5-day periods per year
-            TimeFrame::Days4_16 => (252.0 / 10.0_f64).sqrt(),       // ~10-day periods per year
-            TimeFrame::Days8_32 => (252.0 / 20.0_f64).sqrt(),       // ~20-day periods per year
-            TimeFrame::Days16_64 => (252.0 / 40.0_f64).sqrt(),      // ~40-day periods per year
+            TimeFrame::Days2_8 => (252.0 / 5.0_f64).sqrt(), // ~5-day periods per year
+            TimeFrame::Days4_16 => (252.0 / 10.0_f64).sqrt(), // ~10-day periods per year
+            TimeFrame::Days8_32 => (252.0 / 20.0_f64).sqrt(), // ~20-day periods per year
+            TimeFrame::Days16_64 => (252.0 / 40.0_f64).sqrt(), // ~40-day periods per year
         };
         let annualized_volatility = capped_volatility * scaling_factor;
 

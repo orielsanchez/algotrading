@@ -110,10 +110,10 @@ pub struct RiskConfig {
 impl Default for RiskConfig {
     fn default() -> Self {
         Self {
-            max_position_size: 0.5,  // 50% of portfolio per position
+            max_position_size: 0.5,       // 50% of portfolio per position
             max_portfolio_exposure: 1.0,  // 100% max exposure
-            stop_loss_percentage: 0.02,  // 2% stop loss
-            take_profit_percentage: 0.04,  // 4% take profit
+            stop_loss_percentage: 0.02,   // 2% stop loss
+            take_profit_percentage: 0.04, // 4% take profit
             max_margin_utilization: default_max_margin_utilization(),
             min_excess_liquidity: default_min_excess_liquidity(),
             futures_position_limit: default_futures_position_limit(),
@@ -348,7 +348,8 @@ impl Default for TradingConfig {
                 max_correlation_exposure: default_max_correlation_exposure(),
                 correlation_lookback_days: default_correlation_lookback_days(),
                 min_positions_for_erc: default_min_positions_for_erc(),
-                enable_transaction_cost_optimization: default_enable_transaction_cost_optimization(),
+                enable_transaction_cost_optimization: default_enable_transaction_cost_optimization(
+                ),
                 stock_commission: default_stock_commission(),
                 futures_commission: default_futures_commission(),
                 forex_commission: default_forex_commission(),

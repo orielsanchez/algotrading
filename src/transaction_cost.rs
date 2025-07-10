@@ -1,7 +1,7 @@
+use crate::security_types::SecurityType;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::security_types::SecurityType;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionCostConfig {
@@ -29,11 +29,13 @@ impl TransactionCostCalculator {
     pub fn calculate_spread_cost(
         &self,
         symbol: &str,
-        security_type: &SecurityType,
+        _security_type: &SecurityType,
         quantity: f64,
         price: f64,
     ) -> Result<f64> {
-        let spread_rate = self.config.bid_ask_spreads
+        let spread_rate = self
+            .config
+            .bid_ask_spreads
             .get(symbol)
             .copied()
             .unwrap_or(0.0010); // Default 0.10% spread
@@ -47,7 +49,9 @@ impl TransactionCostCalculator {
         security_type: &SecurityType,
         quantity: f64,
     ) -> Result<f64> {
-        let commission_rate = self.config.commission_rates
+        let commission_rate = self
+            .config
+            .commission_rates
             .get(&security_type)
             .copied()
             .unwrap_or(1.00); // Default $1.00
@@ -61,7 +65,7 @@ impl TransactionCostCalculator {
 
     pub fn calculate_market_impact_cost(
         &self,
-        symbol: &str,
+        _symbol: &str,
         quantity: f64,
         price: f64,
         daily_volume: f64,
@@ -74,8 +78,9 @@ impl TransactionCostCalculator {
         }
 
         let excess_percentage = volume_percentage - self.config.market_impact_threshold;
-        let impact_cost = position_value * excess_percentage * self.config.market_impact_coefficient;
-        
+        let impact_cost =
+            position_value * excess_percentage * self.config.market_impact_coefficient;
+
         Ok(impact_cost)
     }
 
@@ -93,7 +98,8 @@ impl TransactionCostCalculator {
 
         let spread_cost = self.calculate_spread_cost(symbol, security_type, quantity, price)?;
         let commission_cost = self.calculate_commission_cost(security_type, quantity)?;
-        let market_impact_cost = self.calculate_market_impact_cost(symbol, quantity, price, daily_volume)?;
+        let market_impact_cost =
+            self.calculate_market_impact_cost(symbol, quantity, price, daily_volume)?;
 
         Ok(spread_cost + commission_cost + market_impact_cost)
     }
@@ -106,7 +112,8 @@ impl TransactionCostCalculator {
         price: f64,
         daily_volume: f64,
     ) -> Result<f64> {
-        let one_way_cost = self.calculate_total_cost(symbol, security_type, quantity, price, daily_volume)?;
+        let one_way_cost =
+            self.calculate_total_cost(symbol, security_type, quantity, price, daily_volume)?;
         Ok(one_way_cost * 2.0)
     }
 }

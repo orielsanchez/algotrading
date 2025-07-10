@@ -1,10 +1,12 @@
-use anyhow::Result;
-use algotrading::risk_budgeting_inertia::{RiskBudgetingInertiaCalculator, ERCInertiaDecision, ERCInertiaDecisionInfo};
-use algotrading::risk_budgeting::{RiskBudgeter, ERCAllocation};
-use algotrading::position_inertia::PositionInertiaCalculator;
-use algotrading::transaction_cost::TransactionCostCalculator;
 use algotrading::portfolio::Portfolio;
+use algotrading::position_inertia::PositionInertiaCalculator;
+use algotrading::risk_budgeting::{ERCAllocation, RiskBudgeter};
+use algotrading::risk_budgeting_inertia::{
+    ERCInertiaDecision, ERCInertiaDecisionInfo, RiskBudgetingInertiaCalculator,
+};
 use algotrading::security_types::SecurityType;
+use algotrading::transaction_cost::TransactionCostCalculator;
+use anyhow::Result;
 
 #[cfg(test)]
 mod risk_budgeting_inertia_tests {
@@ -12,7 +14,7 @@ mod risk_budgeting_inertia_tests {
 
     fn setup_test_risk_budgeting_inertia() -> RiskBudgetingInertiaCalculator {
         RiskBudgetingInertiaCalculator::new(
-            2.0, // inertia_multiplier
+            2.0,  // inertia_multiplier
             0.02, // rebalance_threshold (2%)
             true, // enable_cost_aware_erc
         )
@@ -21,7 +23,7 @@ mod risk_budgeting_inertia_tests {
     #[test]
     fn test_erc_allocation_with_inertia_constraints() -> Result<()> {
         let calculator = setup_test_risk_budgeting_inertia();
-        
+
         // Mock current portfolio positions
         let current_positions = vec![
             ("AAPL", 10000.0, 0.25), // symbol, value, current_weight
@@ -78,7 +80,7 @@ mod risk_budgeting_inertia_tests {
     #[test]
     fn test_small_erc_adjustments_blocked_by_inertia() -> Result<()> {
         let calculator = setup_test_risk_budgeting_inertia();
-        
+
         // Mock current portfolio with small ERC deviations
         let current_positions = vec![
             ("AAPL", 10000.0, 0.250), // Current weight
@@ -125,7 +127,7 @@ mod risk_budgeting_inertia_tests {
     #[test]
     fn test_partial_erc_rebalancing() -> Result<()> {
         let calculator = setup_test_risk_budgeting_inertia();
-        
+
         // Mixed scenario: some positions justify rebalancing, others don't
         let current_positions = vec![
             ("AAPL", 8000.0, 0.20),   // Large change needed
@@ -157,13 +159,13 @@ mod risk_budgeting_inertia_tests {
 
         // AAPL: $2000 change vs $60 threshold = Rebalance
         assert_eq!(decisions[0].action, ERCInertiaDecision::Rebalance);
-        
+
         // GOOGL: $800 change vs $80 threshold = Rebalance
         assert_eq!(decisions[1].action, ERCInertiaDecision::Rebalance);
-        
+
         // MSFT: $2000 change vs $50 threshold = Rebalance
         assert_eq!(decisions[2].action, ERCInertiaDecision::Rebalance);
-        
+
         // AMZN: $800 change vs $90 threshold = Rebalance
         assert_eq!(decisions[3].action, ERCInertiaDecision::Rebalance);
 
@@ -173,7 +175,7 @@ mod risk_budgeting_inertia_tests {
     #[test]
     fn test_correlation_risk_with_inertia() -> Result<()> {
         let calculator = setup_test_risk_budgeting_inertia();
-        
+
         // Mock positions with high correlation
         let current_positions = vec![
             ("AAPL", 10000.0, 0.25),
@@ -191,10 +193,10 @@ mod risk_budgeting_inertia_tests {
         ];
 
         let erc_targets = vec![
-            ("AAPL", 0.20),  // Reduce concentration
+            ("AAPL", 0.20), // Reduce concentration
             ("GOOGL", 0.20),
             ("MSFT", 0.20),
-            ("NVDA", 0.15),  // Reduce most correlated
+            ("NVDA", 0.15), // Reduce most correlated
         ];
 
         let transaction_costs = vec![
@@ -214,7 +216,7 @@ mod risk_budgeting_inertia_tests {
 
         // High correlation should increase urgency to rebalance
         assert!(decisions.iter().any(|d| d.correlation_risk_boost > 0.0));
-        
+
         // NVDA should have highest correlation penalty
         let nvda_decision = decisions.iter().find(|d| d.symbol == "NVDA").unwrap();
         assert!(nvda_decision.correlation_risk_boost > 0.0);
@@ -225,7 +227,7 @@ mod risk_budgeting_inertia_tests {
     #[test]
     fn test_erc_rebalancing_threshold_override() -> Result<()> {
         let calculator = setup_test_risk_budgeting_inertia();
-        
+
         // Test portfolio drift exceeding rebalancing threshold
         let current_positions = vec![
             ("AAPL", 8000.0, 0.20),
@@ -266,7 +268,7 @@ mod risk_budgeting_inertia_tests {
     #[test]
     fn test_portfolio_risk_budget_adjustment() -> Result<()> {
         let calculator = setup_test_risk_budgeting_inertia();
-        
+
         // Test overall portfolio risk budget needs adjustment
         let current_positions = vec![
             ("AAPL", 10000.0, 0.25),
@@ -291,7 +293,7 @@ mod risk_budgeting_inertia_tests {
 
         // Simulate portfolio volatility exceeding target
         let portfolio_volatility = 0.30; // 30% volatility
-        let target_volatility = 0.25;    // 25% target
+        let target_volatility = 0.25; // 25% target
 
         let decisions = calculator.calculate_erc_with_volatility_adjustment(
             current_positions,
@@ -304,9 +306,13 @@ mod risk_budgeting_inertia_tests {
 
         // Should adjust all positions to reduce portfolio volatility
         assert!(decisions.iter().all(|d| d.volatility_adjustment_applied));
-        
+
         // Should override inertia due to risk budget breach
-        assert!(decisions.iter().any(|d| d.action == ERCInertiaDecision::Rebalance));
+        assert!(
+            decisions
+                .iter()
+                .any(|d| d.action == ERCInertiaDecision::Rebalance)
+        );
 
         Ok(())
     }
@@ -314,11 +320,11 @@ mod risk_budgeting_inertia_tests {
     #[test]
     fn test_cost_aware_erc_disabled() -> Result<()> {
         let calculator = RiskBudgetingInertiaCalculator::new(
-            2.0,    // inertia_multiplier
-            0.02,   // rebalance_threshold
-            false,  // enable_cost_aware_erc (DISABLED)
+            2.0,   // inertia_multiplier
+            0.02,  // rebalance_threshold
+            false, // enable_cost_aware_erc (DISABLED)
         );
-        
+
         let current_positions = vec![
             ("AAPL", 10000.0, 0.25),
             ("GOOGL", 10000.0, 0.25),
@@ -348,7 +354,11 @@ mod risk_budgeting_inertia_tests {
         )?;
 
         // With cost-aware ERC disabled, should rebalance despite high costs
-        assert!(decisions.iter().all(|d| d.action == ERCInertiaDecision::Rebalance));
+        assert!(
+            decisions
+                .iter()
+                .all(|d| d.action == ERCInertiaDecision::Rebalance)
+        );
         assert!(decisions.iter().all(|d| !d.blocked_by_inertia));
 
         Ok(())
@@ -375,7 +385,7 @@ mod risk_budgeting_inertia_tests {
         // Test that decision can be serialized/deserialized (for logging)
         let serialized = serde_json::to_string(&decision)?;
         let deserialized: ERCInertiaDecisionInfo = serde_json::from_str(&serialized)?;
-        
+
         assert_eq!(decision.symbol, deserialized.symbol);
         assert_eq!(decision.action, deserialized.action);
         assert_eq!(decision.transaction_cost, deserialized.transaction_cost);
